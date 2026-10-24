@@ -28,6 +28,10 @@ function detailTarget(response, request) {
   if (status?.shipmentId && /^\d{12}$/.test(String(status.shipmentId))) {
     if (request.isShipment && String(status.shipmentId) !== request.identifier) throw Error('DHL gönderi numarası eşleşmedi.');
     if (!request.isShipment && String(status.referenceId || '').toUpperCase() !== request.identifier) throw Error('DHL referansı eşleşmedi.');
+    // DHL may return 404 for shipment detail even when current status exists.
+    // Its order endpoint still provides the exact reference, shipment and recipient.
+    if (/^[A-Z0-9][A-Z0-9._-]{1,99}$/i.test(String(status.referenceId || '')))
+      return 'getorder/' + encodeURIComponent(status.referenceId);
     return 'getshipmentByShipmentId/' + encodeURIComponent(status.shipmentId);
   }
   // A reference may exist as a DHL order before a shipment barcode is created.
@@ -38,7 +42,12 @@ function detailTarget(response, request) {
 function resolveShipment(statusResponse, detailResponse, request) {
   const status = unwrap(statusResponse);
   const detail = unwrap(detailResponse);
-  if (!detail) throw Error('DHL kayıt bilgisi alınamadı. İptal yapılmadı.');
+  const statusOnly = !detail && !!status?.shipmentId;
+  if (!detail && !statusOnly) throw Error('DHL kayıt bilgisi alınamadı. İptal yapılmadı.');
+  if (statusOnly) {
+    const result = resolveShipment(statusResponse, {statusCode:200,body:{shipment:status}}, request);
+    return {...result,canCancel:false,reason:'DHL güncel durumu bulundu ancak ayrıntılı kayıt alınamadı. İptal için kayıt detaylarının doğrulanması gerekiyor.',carrierDetail:null};
+  }
   const data = detail.shipment || detail.order || detail;
   const referenceId = String(data.referenceId || detail.referenceId || status?.referenceId || '').trim();
   const shipmentId = String(data.shipmentId || detail.shipmentId || status?.shipmentId || '').trim();

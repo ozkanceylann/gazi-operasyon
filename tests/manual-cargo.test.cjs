@@ -10,7 +10,7 @@ assert.throws(()=>L.authorize(auth,{identifier:'x/../../cancel',operation:'query
 assert.throws(()=>L.authorize(auth,{identifier:'AKH452009979-R2',operation:'cancel'}));
 const state={referenceId:'AKH452009979-R2',shipmentId:'123456789012',shipmentStatusCode:1,shipmentStatus:'Gönderi Hazırlandı',isDelivered:false};
 const detail={referenceId:state.referenceId,shipmentId:state.shipmentId,recipient:{fullName:'Test Alıcı'},pieceTotal:2};
-assert.equal(L.detailTarget(ok(state),request),'getshipmentByShipmentId/123456789012');
+assert.equal(L.detailTarget(ok(state),request),'getorder/AKH452009979-R2');
 const shipment=L.resolveShipment(ok(state),ok(detail),request);
 assert(shipment.canCancel);assert.equal(shipment.recipient,'Test Alıcı');
 assert.throws(()=>L.resolveShipment(ok(state),ok({...detail,referenceId:'AKH452009979-R1'}),request));
@@ -48,3 +48,19 @@ console.log('PASS: auth, identity, query-only flow, no-order/order-only, DHL fai
 
 assert(!L.resolveShipment({statusCode:404},ok({order:{referenceId:state.referenceId,isTransformedToShipment:1}}),request).canCancel);
 assert(!L.resolveShipment({statusCode:404},ok({order:{referenceId:state.referenceId}}),request).canCancel);
+
+// Regression: both live lookup methods find status, but shipment detail is 404.
+const actualStatus={referenceId:'AKH4520010044',shipmentId:'544828415418',shipmentStatusCode:1,shipmentStatus:'Gönderi_Hazırlandı',isDelivered:0};
+const actualOrder={order:{referenceId:actualStatus.referenceId,shipmentId:actualStatus.shipmentId,isTransformedToShipment:1},recipient:{fullName:'Test Alıcı',city:'BALIKESİR',district:'ERDEK'},orderPieceList:[]};
+for(const identifier of [actualStatus.referenceId,actualStatus.shipmentId]){
+ const query=L.authorize(auth,{identifier});
+ assert.equal(L.detailTarget(ok([actualStatus]),query),'getorder/AKH4520010044');
+ const result=L.resolveShipment(ok([actualStatus]),ok([actualOrder]),query);
+ assert.equal(result.shipmentId,actualStatus.shipmentId);assert.equal(result.referenceId,actualStatus.referenceId);assert.equal(result.recipient,'Test Alıcı');
+ assert(result.canCancel);
+ const partial=L.resolveShipment(ok([actualStatus]),{statusCode:404,body:{}},query);
+ assert.equal(partial.shipmentId,actualStatus.shipmentId);assert.equal(partial.canCancel,false);
+ assert.throws(()=>L.preview(partial,null,{...query,operation:'cancel'}));
+ assert.throws(()=>L.resolveShipment(ok([actualStatus]),ok([{...actualOrder,order:{...actualOrder.order,shipmentId:'000000000000'}}]),query));
+}
+console.log('PASS: live DHL response shape, reference/shipment queries, detail 404 read-only result');
