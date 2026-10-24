@@ -1,0 +1,217 @@
+[
+  {
+    "name": "İade Takip · Saatlik",
+    "type": "n8n-nodes-base.scheduleTrigger",
+    "typeVersion": 1.2,
+    "position": [
+      -240,
+      2240
+    ],
+    "parameters": {
+      "rule": {
+        "interval": [
+          {
+            "field": "hours",
+            "hoursInterval": 1,
+            "triggerAtMinute": 17
+          }
+        ]
+      }
+    }
+  },
+  {
+    "parameters": {
+      "operation": "get",
+      "dataTableId": {
+        "__rl": true,
+        "mode": "id",
+        "value": "CGLpnpOKHd2w6ym5"
+      },
+      "matchType": "allConditions",
+      "filters": {
+        "conditions": [
+          {
+            "keyValue": "18"
+          }
+        ]
+      },
+      "limit": 1
+    },
+    "name": "İade Takip · Token",
+    "type": "n8n-nodes-base.dataTable",
+    "typeVersion": 1.1,
+    "position": [
+      0,
+      2240
+    ]
+  },
+  {
+    "name": "İade Takip · Açık İadeler",
+    "type": "n8n-nodes-base.httpRequest",
+    "typeVersion": 4.5,
+    "position": [
+      240,
+      2240
+    ],
+    "parameters": {
+      "url": "https://jarsxtpqzqzhlshpmgot.supabase.co/rest/v1/gazi_siparisler?select=siparis_no,iade_kodu,iade_takip_kodu,kargo_takip_kodu&iade_kodu=not.is.null&iade_teslim_tarihi=is.null&kargo_durumu=neq.Silindi&order=iade_son_kontrol.asc.nullsfirst,siparis_no.asc&limit=50",
+      "authentication": "predefinedCredentialType",
+      "nodeCredentialType": "supabaseApi",
+      "options": {
+        "timeout": 30000
+      }
+    },
+    "credentials": {
+      "supabaseApi": {
+        "id": "BBA8YSbXFzA6xcvt",
+        "name": "Supabase account"
+      }
+    }
+  },
+  {
+    "name": "İade Takip · DHL Durum",
+    "type": "n8n-nodes-base.httpRequest",
+    "typeVersion": 4.5,
+    "position": [
+      480,
+      2240
+    ],
+    "parameters": {
+      "url": "={{ 'https://api.mngkargo.com.tr/mngapi/api/standardqueryapi/getshipmentstatus/'+encodeURIComponent($json.iade_kodu) }}",
+      "sendHeaders": true,
+      "headerParameters": {
+        "parameters": [
+          {
+            "name": "Accept",
+            "value": "application/json"
+          },
+          {
+            "name": "x-api-version",
+            "value": "v1"
+          },
+          {
+            "name": "X-IBM-Client-Id",
+            "value": "={{ $('İade Takip · Token').first().json.X_IBM_Client_Id }}"
+          },
+          {
+            "name": "X-IBM-Client-Secret",
+            "value": "={{ $('İade Takip · Token').first().json.X_IBM_Client_Secret }}"
+          },
+          {
+            "name": "Authorization",
+            "value": "={{ 'Bearer '+$('İade Takip · Token').first().json.jwt }}"
+          }
+        ]
+      },
+      "options": {
+        "response": {
+          "response": {
+            "fullResponse": true,
+            "neverError": true,
+            "responseFormat": "json"
+          }
+        },
+        "timeout": 7000,
+        "batching": {
+          "batch": {
+            "batchSize": 10,
+            "batchInterval": 200
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "İade Takip · DHL Hareket",
+    "type": "n8n-nodes-base.httpRequest",
+    "typeVersion": 4.5,
+    "position": [
+      720,
+      2240
+    ],
+    "parameters": {
+      "url": "={{ 'https://api.mngkargo.com.tr/mngapi/api/standardqueryapi/trackshipment/'+encodeURIComponent($('İade Takip · Açık İadeler').item.json.iade_kodu) }}",
+      "sendHeaders": true,
+      "headerParameters": {
+        "parameters": [
+          {
+            "name": "Accept",
+            "value": "application/json"
+          },
+          {
+            "name": "x-api-version",
+            "value": "v1"
+          },
+          {
+            "name": "X-IBM-Client-Id",
+            "value": "={{ $('İade Takip · Token').first().json.X_IBM_Client_Id }}"
+          },
+          {
+            "name": "X-IBM-Client-Secret",
+            "value": "={{ $('İade Takip · Token').first().json.X_IBM_Client_Secret }}"
+          },
+          {
+            "name": "Authorization",
+            "value": "={{ 'Bearer '+$('İade Takip · Token').first().json.jwt }}"
+          }
+        ]
+      },
+      "options": {
+        "response": {
+          "response": {
+            "fullResponse": true,
+            "neverError": true,
+            "responseFormat": "json"
+          }
+        },
+        "timeout": 7000,
+        "batching": {
+          "batch": {
+            "batchSize": 10,
+            "batchInterval": 200
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "İade Takip · Doğrula",
+    "type": "n8n-nodes-base.code",
+    "typeVersion": 2,
+    "position": [
+      960,
+      2240
+    ],
+    "parameters": {
+      "mode": "runOnceForEachItem",
+      "jsCode": "// Used by the scheduled n8n return tracker. No outbound-shipment fallbacks.\nfunction normalizeReturn(order,response,movementResponse) {\n const fail=error=>({p_id:order.siparis_no,p_reference:order.iade_kodu,p_data:{error}});\n const rows=Array.isArray(response.body)?response.body:[response.body];\n if(response.statusCode!==200)return fail(response.statusCode===404?'DHL iade teslim alımı henüz doğrulanamadı.':'DHL iade sorgusu alınamadı; tekrar denenecek.');\n const status=rows.find(s=>s && String(s.referenceId||'')===order.iade_kodu);\n if(!status)return fail('DHL iade referansı eşleşmedi; durum değiştirilmedi.');\n const shipmentId=String(status.shipmentId||'');\n if(!/^\\d{12}$/.test(shipmentId) || shipmentId===String(order.kargo_takip_kodu||'') || (order.iade_takip_kodu&&shipmentId!==order.iade_takip_kodu))return fail('DHL iade gönderisi doğrulanamadı.');\n const code=Number(status.shipmentStatusCode);\n const stages={1:'İade teslim bekliyor',2:'İade yolda',3:'İade yolda',4:'İade dağıtımda',5:'İade teslim edildi',6:'İade teslim edilemedi',7:'İade sorun',8:'İade sorun'};\n if(!stages[code])return fail('DHL iade durum kodu tanınmadı.');\n if(movementResponse.statusCode!==200 || !Array.isArray(movementResponse.body))return fail('DHL iade hareketleri alınamadı; tekrar denenecek.');\n if(movementResponse.body.some(e=>(e.referenceId&&String(e.referenceId)!==order.iade_kodu)||(e.shipmentId&&String(e.shipmentId)!==shipmentId)))return fail('İade hareketleri farklı gönderiye ait; kayıt değiştirilmedi.');\n const events=movementResponse.body.map(e=>Object.fromEntries(['eventStatus','eventDateTime','eventDateTime2','eventSequence','location','description'].filter(k=>e[k]!=null).map(k=>[k,String(e[k]).slice(0,1000)])));\n function deliveryDate(value){\n  const s=String(value||'').trim();\n  let iso=s;\n  const tr=s.match(/^(\\d{2})[./](\\d{2})[./](\\d{4})(?:[ T](\\d{2}):(\\d{2})(?::(\\d{2}))?)?$/);\n  if(tr)iso=`${tr[3]}-${tr[2]}-${tr[1]}T${tr[4]||'00'}:${tr[5]||'00'}:${tr[6]||'00'}+03:00`;\n  else if(/^\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}/.test(s)&&!/(Z|[+-]\\d{2}:?\\d{2})$/.test(s))iso=s.replace(' ','T')+'+03:00';\n  else if(!/^\\d{4}-\\d{2}-\\d{2}T/.test(s))return null;\n  return Number.isFinite(Date.parse(iso))?new Date(iso).toISOString():null;\n }\n return {p_id:order.siparis_no,p_reference:order.iade_kodu,p_data:{shipmentId,stage:stages[code],events,deliveredAt:code===5?deliveryDate(status.deliveryDateTime):null}};\n}\n\nreturn {json:normalizeReturn($('İade Takip · Açık İadeler').item.json,$('İade Takip · DHL Durum').item.json,$json)};"
+    }
+  },
+  {
+    "name": "İade Takip · Kaydet",
+    "type": "n8n-nodes-base.httpRequest",
+    "typeVersion": 4.5,
+    "position": [
+      1200,
+      2240
+    ],
+    "parameters": {
+      "method": "POST",
+      "url": "https://jarsxtpqzqzhlshpmgot.supabase.co/rest/v1/rpc/gazi_iade_tracking_save",
+      "authentication": "predefinedCredentialType",
+      "nodeCredentialType": "supabaseApi",
+      "sendBody": true,
+      "specifyBody": "json",
+      "jsonBody": "={{ $json }}",
+      "options": {
+        "timeout": 30000
+      }
+    },
+    "credentials": {
+      "supabaseApi": {
+        "id": "BBA8YSbXFzA6xcvt",
+        "name": "Supabase account"
+      }
+    }
+  }
+]

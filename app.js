@@ -215,7 +215,7 @@ function applyTabFilter(q, tab=currentTab, operation=operationFilter, allCargo=f
   }
   if(tab==="tamamlandi") q = q.or(deliveredFilter);
   if(tab==="sorunlu") q=q.or([cargoStateFilter("failed"),cargoStateFilter("support")].join(","));
-  if(tab==="iade") q=q.or(cargoStateFilter("return")+",iade_kodu.not.is.null");
+  if(tab==="iade") q=q.not("iade_kodu","is",null);
   if(tab==="iptal")      q = q.eq("kargo_durumu","İptal");
 
   return applyOperationFilter(q, operation);
@@ -340,7 +340,7 @@ async function loadOrders(reset=false, forceCounts=true){
   const labelQueue = cargoFilterGlobal ? cargoFilter === "created" : currentTab === "kargolandi";
   const { data, error, count } = labelQueue
     ? await loadCargoLabelQueue(start, end)
-    : await q.order("liste_sira_no", { ascending: currentTab === "bekleyen" }).order("siparis_no", { ascending: true }).range(start, end);
+    : await orderReturnQuery(q,currentTab === "iade" && !cargoFilterGlobal).order("liste_sira_no", { ascending: currentTab === "bekleyen" }).order("siparis_no", { ascending: true }).range(start, end);
   if (request !== listRequest) return;
   if(error){
     if(!reset)currentPage=Math.max(1,currentPage-1);
@@ -856,10 +856,20 @@ function returnOrderActions(order){
     return `<button class="btn-return-label btn-return-label-create" type="button" onclick="event.stopPropagation(); createReturnLabel(${Number(order.siparis_no)}, this)">İADE Etiketi Oluştur</button>`;
   return `<span class="cargo-checked">Geri dönüş kargosu</span>`;
 }
+function orderReturnQuery(query,isReturn){
+  return isReturn ? query.order("iade_tamamlandi",{ascending:true}).order("iade_teslim_tarihi",{ascending:false,nullsFirst:false}).order("iade_tarihi",{ascending:false,nullsFirst:false}) : query;
+}
+function returnStage(order){return order.iade_durumu && order.iade_durumu !== "Etiket Oluşturuldu" ? order.iade_durumu : "İade teslim bekliyor";}
+function renderReturnMovements(order){
+  if(!order.iade_kodu)return "";
+  const events=Array.isArray(order.iade_hareketleri)?order.iade_hareketleri:[];
+  const sorted=sortCargoMovements(events);
+  return `<details class="detail-group detail-movement-history"><summary>İade Hareketleri · ${escapeHtml(returnStage(order))}</summary><p>İade referansı: ${escapeHtml(order.iade_kodu)} · Takip no: ${escapeHtml(order.iade_takip_kodu||"DHL teslim alımı bekleniyor")}</p>${order.iade_teslim_tarihi?`<p>Teslim: ${escapeHtml(formatDateTimeTR(order.iade_teslim_tarihi))}</p>`:""}<ol class="cargo-timeline">${sorted.map(e=>`<li><strong>${escapeHtml(e.eventStatus||"İade hareketi")}</strong><span>${escapeHtml(e.eventDateTime||"")} · ${escapeHtml(e.location||"")}</span><span>${escapeHtml(e.description||"")}</span></li>`).join("")||`<li><strong>İade teslim bekliyor</strong><span>${escapeHtml(formatDateTimeTR(order.iade_tarihi))}</span></li>`}</ol>${order.iade_takip_hatasi?`<p class="cargo-warning">${escapeHtml(order.iade_takip_hatasi)}</p>`:""}</details>`;
+}
 function renderReturnDetail(order){
   const url=returnLabelUrl(order.iade_etiket_url);
   if(!url)return "";
-  return `<div class="detail-group return-detail"><div class="detail-title">İade Fişi</div><p>İade kodu: <strong>${escapeHtml(order.iade_kodu)}</strong></p><p>${escapeHtml(order.iade_durumu||"Etiket oluşturuldu")} · ${escapeHtml(formatDateTimeTR(order.iade_tarihi))}</p><a class="btn-return-label" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">İade Fişini Aç</a></div>`;
+  return `<div class="detail-group return-detail"><div class="detail-title">İade Fişi</div><p>İade kodu: <strong>${escapeHtml(order.iade_kodu)}</strong></p><p>${escapeHtml(returnStage(order))} · ${escapeHtml(formatDateTimeTR(order.iade_tarihi))}</p><a class="btn-return-label" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">İade Fişini Aç</a></div>`;
 }
 function showReturnLabel(result){
   const url=returnLabelUrl(result.url);if(!url)throw new Error("İade fişi bağlantısı doğrulanamadı.");
@@ -1044,7 +1054,7 @@ function cargoStatusBadge(order,{compact=false}={}){
   const movements=cargoTrackingData(order).movements;
   const latest=sortCargoMovements(movements)[0] || null;
   const contact=cargoStatusInfo(order).key==="failed"&&latest ? `<small style="display:block;margin-top:5px">${cargoBranchContact(latest)}</small>` : "";
-  const returnBadge = order.iade_kodu ? `<small class="cargo-checked"><span class="cargo-status cargo-status--return">İade etiketi oluşturuldu</span></small>` : "";
+  const returnBadge = order.iade_kodu ? `<small class="cargo-checked"><span class="cargo-status cargo-status--return">${escapeHtml(returnStage(order))}</span>${order.iade_teslim_tarihi?escapeHtml(formatDateTimeTR(order.iade_teslim_tarihi)):""}</small>` : "";
   return `<span class="cargo-status-actions"><span class="cargo-status cargo-status--${tone}">${escapeHtml(label)}</span>${currentTab==="kargolandi"&&canRequestBranchLabel(order)?branchLabelButton(order,true):""}</span>${returnBadge}${checked}${contact}`;
 }
 function cargoEnvironment(order){
@@ -1481,7 +1491,7 @@ ${extraSlot(d,'history')}
 ${renderOriginalMessage(d)}
 `;
 
-  document.getElementById("orderDetails").insertAdjacentHTML("beforeend",renderCargoTracking(d) + renderReturnDetail(d));
+  document.getElementById("orderDetails").insertAdjacentHTML("beforeend",renderCargoTracking(d) + renderReturnMovements(d) + renderReturnDetail(d));
   bindOriginalMessage(d);
   OrderReceipts.mount(db,d,document.getElementById("orderDetails"),()=>loadOrders(true));
   /* ============================================================
@@ -2506,7 +2516,7 @@ async function searchOrders(scope = "all", append=false) {
       .or("kargo_durumu.is.null,kargo_durumu.neq.Silindi");
     if (inTab) query = applyCargoFilter(applyTabFilter(query,currentTab,operationFilter,cargoFilterGlobal));
     const start=(currentPage-1)*PAGE_SIZE;
-    const { data, error, count } = await query.or(buildOrderSearchFilter(raw))
+    const { data, error, count } = await orderReturnQuery(query.or(buildOrderSearchFilter(raw)),inTab && currentTab === "iade" && !cargoFilterGlobal)
       .order("liste_sira_no", { ascending: inTab && currentTab === "bekleyen" }).order("siparis_no", { ascending: true }).range(start,start+PAGE_SIZE-1);
     if (request !== listRequest) return;
     if (error) throw error;
