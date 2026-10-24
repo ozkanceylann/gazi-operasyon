@@ -503,7 +503,7 @@
       "typeVersion": 4.5,
       "parameters": {
         "method": "PATCH",
-        "url": "={{ (()=>{const o=$('Manuel Kargo · Bekleyen Kaydını Hazırla').first(0).json.order;const fields=['siparis_no','kargo_siparis_no','kargo_takip_kodu','kargo_durumu','orderinvoiceid','kargo_api_yanit'];return 'https://jarsxtpqzqzhlshpmgot.supabase.co/rest/v1/gazi_siparisler?'+fields.map(k=>encodeURIComponent(k)+'='+encodeURIComponent(o[k]==null?'is.null':'eq.'+JSON.stringify(o[k]))).join('&');})() }}",
+        "url": "={{ (()=>{const o=$('Manuel Kargo · Bekleyen Kaydını Hazırla').first(0).json.order;const fields=['siparis_no','kargo_siparis_no','kargo_takip_kodu','kargo_durumu','orderinvoiceid','kargo_api_yanit'];return 'https://jarsxtpqzqzhlshpmgot.supabase.co/rest/v1/gazi_siparisler?'+fields.map(k=>encodeURIComponent(k)+'='+encodeURIComponent(o[k]==null?'is.null':'eq.'+String(o[k]))).join('&');})() }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,

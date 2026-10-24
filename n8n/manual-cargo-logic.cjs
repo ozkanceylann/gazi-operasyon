@@ -117,6 +117,11 @@ function prepareRecord(order, shipment, request, response) {
       previousReference:previous,previousShipment:meta,response:response.body}})};
   return {order,patch,response:result};
 }
+function recordUpdateUrl(order) {
+  const fields=['siparis_no','kargo_siparis_no','kargo_takip_kodu','kargo_durumu','orderinvoiceid','kargo_api_yanit'];
+  // Top-level eq values are literal values, not the quoted grammar used in or/in.
+  return 'https://jarsxtpqzqzhlshpmgot.supabase.co/rest/v1/gazi_siparisler?'+fields.map(k=>encodeURIComponent(k)+'='+encodeURIComponent(order[k]==null?'is.null':'eq.'+String(order[k]))).join('&');
+}
 function verifyRecord(response, expected) {
   const rows=response.body;
   if (response.statusCode!==200 || !Array.isArray(rows) || rows.length!==1 || Number(rows[0].siparis_no)!==Number(expected.order.siparis_no) ||
@@ -124,4 +129,4 @@ function verifyRecord(response, expected) {
     throw Error('DHL iptali tamamlandı ancak panel kaydı güncellenemedi veya işlem sırasında değişti. Yeniden kargolamadan önce kontrol edin.');
   return {...expected.response,recordVerified:true};
 }
-module.exports={authorize,unwrap,detailTarget,resolveShipment,matchOrder,preview,verifyCancellation,prepareRecord,verifyRecord};
+module.exports={authorize,unwrap,detailTarget,resolveShipment,matchOrder,preview,verifyCancellation,prepareRecord,verifyRecord,recordUpdateUrl};

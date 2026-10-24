@@ -64,3 +64,9 @@ for(const identifier of [actualStatus.referenceId,actualStatus.shipmentId]){
  assert.throws(()=>L.resolveShipment(ok([actualStatus]),ok([{...actualOrder,order:{...actualOrder.order,shipmentId:'000000000000'}}]),query));
 }
 console.log('PASS: live DHL response shape, reference/shipment queries, detail 404 read-only result');
+
+const special={...order,kargo_api_yanit:'{"text":"Tırnak \\" ve + & % (a), nokta."}',orderinvoiceid:null};
+const updateUrl=new URL(L.recordUpdateUrl(special));
+for(const key of ['siparis_no','kargo_siparis_no','kargo_takip_kodu','kargo_durumu','kargo_api_yanit'])assert.equal(updateUrl.searchParams.get(key),'eq.'+String(special[key]));
+assert.equal(updateUrl.searchParams.get('orderinvoiceid'),'is.null');
+console.log('PASS: literal REST equality filters preserve quotes, spaces and reserved characters');
