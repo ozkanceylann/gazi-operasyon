@@ -235,6 +235,32 @@ function applyOperationFilter(query, key){
     ? query.or("and(kargo_zpl.not.is.null,kargo_zpl.neq.),zpl_base64.like.JVBER%")
     : query.or("and(or(kargo_zpl.is.null,kargo_zpl.eq.),or(zpl_base64.is.null,zpl_base64.not.like.JVBER%)),etiket_yazdirma_sayisi.is.null,etiket_yazdirma_sayisi.eq.0");
 }
+let missingOperationIds=[],missingOperationActive=false,missingOperationBusy=false;
+function renderMissingOperationNotice(){
+  const slot=document.getElementById("missingOperationSlot");
+  if(!slot)return;
+  slot.innerHTML=missingOperationIds.length?`<button class="missing-operation-notice" type="button" onclick="openNextMissingOperation()"><span aria-hidden="true">⚠</span><span>Eksik bilgili sipariş var<small>${missingOperationIds.length} bekleyen sipariş · Kontrol et</small></span></button>`:"";
+}
+function missingOperationNavigation(){
+  return missingOperationActive&&missingOperationIds.length?`<div class="missing-operation-navigation"><span>Eksik bilgili ${missingOperationIds.length} bekleyen sipariş</span><button type="button" onclick="openNextMissingOperation()">Sıradaki ›</button></div>`:"";
+}
+async function openNextMissingOperation(){
+  if(missingOperationBusy)return;
+  if(!missingOperationIds.length){missingOperationActive=false;closeModal();toast("Eksik bilgili bekleyen sipariş kalmadı.");return;}
+  missingOperationBusy=true;
+  try{
+    const index=missingOperationIds.indexOf(Number(selectedOrder?.siparis_no));
+    const ids=[...missingOperationIds.slice(index+1),...missingOperationIds.slice(0,index+1)];
+    for(const id of ids){
+      const order=await openOrder(id,{missingQueue:true});
+      if(!order)return;
+      if(order.kargo_durumu==="Bekliyor"&&missingDeliveryFields(order).length){renderDetails();return;}
+      missingOperationIds=missingOperationIds.filter(value=>value!==id);renderMissingOperationNotice();
+    }
+    missingOperationActive=false;closeModal();toast("Eksik bilgili bekleyen sipariş kalmadı.");
+  }finally{missingOperationBusy=false;}
+}
+window.openNextMissingOperation=openNextMissingOperation;
 let operationCountsLoading = false;
 let operationCountsUpdatedAt = 0;
 let operationCountsForceQueued = false;
@@ -248,6 +274,7 @@ async function refreshOperationCounts(force=true){
   let complete=true;
   try{
     const {data,error}=await db.rpc("gazi_operation_counts");
+    if(!error&&Array.isArray(data?.missing_pending_ids)){missingOperationIds=[...new Set(data.missing_pending_ids.map(Number).filter(Number.isSafeInteger))];renderMissingOperationNotice();}
     for(const [key,card] of Object.entries(OPERATION_CARDS)){
       const value=panel.querySelector(`[data-operation-count="${key}"]`);
       const parcelValue=panel.querySelector(`[data-operation-parcels="${key}"]`);
@@ -1412,7 +1439,8 @@ function showApiResult(content) {
    DETAY
 ============================================================ */
 let detailLoadRequest=0;
-async function openOrder(id){
+async function openOrder(id,{missingQueue=false}={}){
+  missingOperationActive=missingQueue;
   const request=++detailLoadRequest;
   const { data } = await db.from(TABLE).select("*").eq("siparis_no", id).single();
   if(request!==detailLoadRequest)return;
@@ -1430,6 +1458,7 @@ async function openOrder(id){
   modal.style.display = "flex";
   if (resetScroll) modal.scrollTop = 0;
   void hydrateExtras([data],()=>request===detailLoadRequest&&selectedOrder===data&&modal.style.display==="flex",document.getElementById("orderDetails"),["history","noteDetail"]);
+  return data;
 }
 
 function closeModal(){
@@ -1479,6 +1508,7 @@ function renderDetails() {
 
   /* — DETAY HTML — */
 document.getElementById("orderDetails").innerHTML = `
+${missingOperationNavigation()}
 <section class="detail-overview" aria-label="Sipariş özeti">
  <div class="detail-overview-main"><div class="detail-order-identifiers"><span class="detail-eyebrow">SİPARİŞ #${Number(d.siparis_no)}</span><span class="detail-reference-number">Referans No: <strong>${escapeHtml(d.kargo_siparis_no || "—")}</strong></span></div>${OrderSplit.related(d)}<h3>${escapeHtml(d.ad_soyad || "Müşteri")}</h3><div class="detail-overview-status">${orderStageBadge(d)}</div></div>
  <div class="detail-overview-total"><strong>${escapeHtml(OrderSplit.formatAmount(d.toplam_tutar))} <small>TL</small></strong><span>${escapeHtml(d.odeme_sekli || "Belirtilmemiş")}</span>${OrderSplit.button(d)}</div>
@@ -1884,8 +1914,11 @@ async function saveEdit(){
   }
   if (!await updateSelectedOrder(updated)) return;
   toast("Kaydedildi");
+  const continueMissing=missingOperationActive&&!missingDeliveryFields({...selectedOrder,...updated}).length;
   closeModal();
-  loadOrders(true);
+  await refreshOperationCounts();
+  void loadOrders(true);
+  if(continueMissing)await openNextMissingOperation();
 }
 
 async function updateSelectedOrder(values) {
@@ -2776,4 +2809,4 @@ if (["bekleyen","hazirlandi","kargolandi","tamamlandi","iade","sorunlu","iptal"]
 // Refresh visible dashboards once a minute; no background polling.
 setInterval(()=>{if(!document.hidden)void refreshOperationCounts(false);},60000);
 
-(async()=>{const {data}=await db.auth.getUser();if(data?.user?.app_metadata?.firma!=="gazi"||data.user.app_metadata?.role==="seller")return;const b=document.createElement("button");b.type="button";b.className="btn-mini";b.textContent="Eşleşmeyen dekontlar";b.onclick=()=>OrderReceipts.unmatched(db);document.querySelector(".page-header-actions")?.append(b);})();
+(async()=>{const {data}=await db.auth.getUser();if(data?.user?.app_metadata?.firma!=="gazi"||data.user.app_metadata?.role==="seller")return;const b=document.createElement("button");b.type="button";b.className="btn-mini";b.textContent="Eşleşmeyen dekontlar";b.onclick=()=>OrderReceipts.unmatched(db);const stack=document.createElement("div");stack.className="receipt-warning-stack";const slot=document.createElement("div");slot.id="missingOperationSlot";slot.setAttribute("aria-live","polite");stack.append(b,slot);document.querySelector(".page-header-actions")?.append(stack);renderMissingOperationNotice();})();
