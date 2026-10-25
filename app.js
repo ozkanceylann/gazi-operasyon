@@ -586,13 +586,29 @@ function orderStageBadge(order) {
   return `<span class="order-stage-badge order-stage-badge--${tone}" aria-label="Sipariş durumu: ${escapeHtml(label)}">${escapeHtml(label)}</span>${split}${delivery}${branchLabelBadge(order)}`;
 }
 
+function missingDeliveryFields(order){
+  const empty=value=>!String(value??"").trim();
+  const fields=[];
+  if(order.teslim_sekli_kontrol===true)fields.push("Teslim şekli seçilmeli");
+  if(empty(order.sehir))fields.push("İl eksik");
+  if(empty(order.ilce))fields.push("İlçe eksik");
+  if(order.subeden_teslim===true){
+    if(empty(order.teslim_subesi))fields.push("Teslim şubesi eksik");
+  }else if(empty(order.adres))fields.push("Adres eksik");
+  return fields;
+}
+function deliveryWarning(order){
+  const fields=missingDeliveryFields(order);
+  return fields.length?`<div class="order-data-warning"><strong><span aria-hidden="true">⚠</span> Eksik teslimat bilgisi</strong><span class="order-data-warning-fields">${fields.map(label=>`<span class="order-field-missing">${label}</span>`).join("")}</span></div>`:"";
+}
+
 function mobileOrderInfo(order){
   const phone=String(order.musteri_tel||order.siparis_tel||"").trim();
   const dial=phone.replace(/[^\d+]/g,"");
-  const place=[order.sehir,order.ilce].filter(Boolean).join(" / ");
+  const place=[order.sehir,order.ilce].map((value,i)=>String(value??"").trim()?escapeHtml(value):`<span class="order-field-missing">${i===0?"İl eksik":"İlçe eksik"}</span>`).join(" / ");
   const kg=CargoWeights.display(order.kargo_kg,order.kargo_adet);
   const field=(label,value)=>value?`<div class="order-mobile-field"><span>${label}</span><strong>${value}</strong></div>`:"";
-  return `<div class="order-mobile-info">${field("Telefon",phone?`<a href="tel:${escapeHtml(dial)}">${escapeHtml(phone)}</a>`:"")}${field("İl / İlçe",escapeHtml(place))}${field("KG",kg?`${escapeHtml(kg)} kg`:"")}${field("Ödeme",escapeHtml(order.odeme_sekli||"Belirtilmemiş"))}</div>
+  return `<div class="order-mobile-info">${field("Telefon",phone?`<a href="tel:${escapeHtml(dial)}">${escapeHtml(phone)}</a>`:"")}${field("İl / İlçe",place)}${field("KG",kg?`${escapeHtml(kg)} kg`:"")}${field("Ödeme",escapeHtml(order.odeme_sekli||"Belirtilmemiş"))}</div>
     ${order.adres?`<p class="order-mobile-address">${escapeHtml(order.adres)}</p>`:""}
     <span class="order-mobile-delivery${order.subeden_teslim===true?" order-mobile-delivery--branch":""}">${order.subeden_teslim===true?"Şubeden teslim"+(order.teslim_subesi?" · "+escapeHtml(order.teslim_subesi):""):"Adrese teslim"}</span>
     <details class="card-original-message"><summary>Orjinal mesaj <span class="disclosure-action"></span></summary><div class="original-message-text">${escapeHtml(order.whatsapp_message_text===undefined?"Mesajı görmek için açın.":order.whatsapp_message_text||"Bu siparişin orijinal mesajı kayıtlı değil.")}</div></details>`;
@@ -650,6 +666,7 @@ function renderTable(rows, { append=false, hasMore } = {}){
   rows.forEach(o=>{
     const tr = document.createElement("tr");
     tr.dataset.orderId=String(o.siparis_no);
+    if(missingDeliveryFields(o).length)tr.classList.add("order-has-missing-data");
     if (hasZeroOrderTotal(o.toplam_tutar)) tr.classList.add("order-zero-total");
     if (OrderSplit.over(o)) tr.classList.add("order-over-cod");
 
@@ -694,7 +711,7 @@ tr.innerHTML = isPendingTab
     <td>${o.siparis_no}${OrderSplit.related(o)}</td>
     <td>${orderStage === "Bekliyor" ? `<div class="order-primary-actions"><button class="btn-prepare" onclick="event.stopPropagation(); prepareFromList(${Number(o.siparis_no)}, this)">Hazırla</button><button type="button" class="btn-direct-cargo" onclick="event.stopPropagation(); directShipFromList(${Number(o.siparis_no)}, this)">Direkt Kargola</button></div> ${actionBtn}` : actionBtn}</td>
     <td class="cargo-count-column">${cargoCountBadge(o.kargo_adet)}</td>
-    <td><div class="order-customer-meta"><span class="order-customer-name" title="${escapeHtml(o.ad_soyad)}">${escapeHtml(o.ad_soyad)}</span>${orderDateMarkup(o.tarih)}</div>${extraSlot(o,'history')}${extraSlot(o,'receipts')}${extraSlot(o,'note')}</td>
+    <td><div class="order-customer-meta"><span class="order-customer-name" title="${escapeHtml(o.ad_soyad)}">${escapeHtml(o.ad_soyad)}</span>${orderDateMarkup(o.tarih)}</div>${deliveryWarning(o)}${extraSlot(o,'history')}${extraSlot(o,'receipts')}${extraSlot(o,'note')}</td>
     <td>
   <span class="order-product-limit"
         title="${escapeHtml(parseProduct(o.urun_bilgisi))}">
@@ -710,7 +727,7 @@ tr.innerHTML = isPendingTab
   : `
     <td>${o.siparis_no}${OrderSplit.related(o)}</td>
     <td class="cargo-count-column">${cargoCountBadge(o.kargo_adet)}</td>
-    <td><div class="order-customer-meta"><span class="order-customer-name" title="${escapeHtml(o.ad_soyad)}">${escapeHtml(o.ad_soyad)}</span>${orderDateMarkup(o.tarih)}</div>${extraSlot(o,'history')}${extraSlot(o,'receipts')}${extraSlot(o,'note')}</td>
+    <td><div class="order-customer-meta"><span class="order-customer-name" title="${escapeHtml(o.ad_soyad)}">${escapeHtml(o.ad_soyad)}</span>${orderDateMarkup(o.tarih)}</div>${deliveryWarning(o)}${extraSlot(o,'history')}${extraSlot(o,'receipts')}${extraSlot(o,'note')}</td>
     <td>
   <span class="order-product-limit"
         title="${escapeHtml(parseProduct(o.urun_bilgisi))}">
