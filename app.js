@@ -616,11 +616,11 @@ function orderStageBadge(order) {
 function missingDeliveryFields(order){
   const empty=value=>!String(value??"").trim();
   const fields=[];
-  if(order.teslim_sekli_kontrol===true)fields.push("Teslim şekli seçilmeli");
+  if(order.teslim_sekli_kontrol===true||order.subeden_teslim==null||/^(teslim( şekli)? seç(in|iniz)?|seç(in|iniz)?)$/i.test(String(order.teslim_subesi??" ").trim().toLocaleLowerCase("tr-TR")))fields.push("Teslim şekli seçilmeli");
   if(empty(order.sehir))fields.push("İl eksik");
   if(empty(order.ilce))fields.push("İlçe eksik");
   if(order.subeden_teslim===true){
-    if(empty(order.teslim_subesi))fields.push("Teslim şubesi eksik");
+    if(empty(order.teslim_subesi)||/^(dhl( kargo)?( şubesi)?|kargo( şubesi)?|şube( seç(in|iniz)?)?|teslim alınacak (dhl )?şube(si)?|seç(in|iniz)?)$/i.test(String(order.teslim_subesi).trim().replace(/\s+/g," ").toLocaleLowerCase("tr-TR")))fields.push("Teslim şubesi eksik");
   }else if(empty(order.adres))fields.push("Adres eksik");
   return fields;
 }
