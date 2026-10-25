@@ -1,0 +1,6 @@
+html{width:100%;max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:pan-x pan-y}
+body{max-width:100%;touch-action:pan-x pan-y}
+@supports(overflow-x:clip){html{overflow-x:clip}}
+@media(any-pointer:coarse),(max-width:900px){
+ input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]),select,textarea{font-size:16px!important}
+}

@@ -1,13 +1,15 @@
 // ================================
 // 🔥 VERSION = DEPLOY TARİHİ
 // ================================
-const VERSION = "20261025-label-cancel-115";
+const VERSION = "20261025-fixed-screen-116";
 const CACHE_NAME = `siparis-app-${VERSION}`;
 
 // Cache edilecek dosyalar
 const ASSETS = [
   "/",
   "/index.html",
+  "/viewport-lock.css",
+  "/viewport-lock.js",
   "/login.html",
   "/style.css",
   "/theme.css",
