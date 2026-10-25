@@ -1,0 +1,380 @@
+{
+  "name": "GAZI KARGO WHATSAPP — CANLI",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://jarsxtpqzqzhlshpmgot.supabase.co/rest/v1/rpc/gazi_wp_claim",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { p_id: $('Kargo Olayını Doğrula').first().json.outbox_id } }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "aa1e6c05-0cdb-4423-ada3-fea8bccb7a53",
+      "name": "Bekleyen Bildirimleri Kilitle",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        800,
+        256
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "BBA8YSbXFzA6xcvt",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "function branchPhones(value){\n const parts=String(value||'').split(/\\s*[-–—/;,|\\n]\\s*/).filter(Boolean);\n const phones=[];let area='';\n for(const part of parts){\n  let digits=part.replace(/\\D/g,'');\n  if(digits.startsWith('0090'))digits=digits.slice(2);\n  if(/^90[2-5]\\d{9}$/.test(digits))digits=digits.slice(2);\n  else if(/^0[2-5]\\d{9}$/.test(digits))digits=digits.slice(1);\n  if(/^[2-5]\\d{9}$/.test(digits)){area=digits.slice(0,3);phones.push('+90'+digits);}\n  else if(/^\\d{7}$/.test(digits)&&area){phones.push('+90'+area+digits);}\n }\n return [...new Set(phones)];\n}\nconst q=$json,p=q.payload||{};if(q.is_test!==false||!/^905\\d{9}$/.test(q.recipient))throw Error('Alıcı doğrulanamadı');if(!/^\\d{12}$/.test(q.shipment_id)||String(p.kargo_takip_kodu)!==q.shipment_id)throw Error('Gönderi eşleşmedi');\nlet a={};try{a=JSON.parse(p.kargo_api_yanit||'{}')}catch{}\nconst tracking=a.tracking||{},status=tracking.status||{},moves=tracking.movements||a.bulk_tracking?.status?.movements||[];\nconst stage=Number(q.stage);if(![1,2,3,4].includes(stage))throw Error('Geçersiz aşama');const branch=[...moves].filter(m=>String(m.eventSequence)==='3'||/varış|destination/i.test(m.eventStatus||m.eventStatusEn||'')).sort((x,y)=>String(y.eventDateTime2||'').localeCompare(String(x.eventDateTime2||'')))[0]||{};\nconst raw=String(p.kargo_adet||'').trim();\nif(!/^\\d+(?:\\s*\\+\\s*\\d+)*$/.test(raw))throw Error('Parça adedi geçersiz; ağırlıktan adet üretilmedi');\nconst pieces=raw.split('+').reduce((n,x)=>n+Number(x.trim()),0);if(!Number.isInteger(pieces)||pieces<1)throw Error('Parça adedi boş');\nconst link='https://kargotakip.dhlecommerce.com.tr/?takipNo='+q.shipment_id;\nif(stage!==1&&!/^https:\\/\\/(?:kargotakip\\.)?dhlecommerce\\.com\\.tr\\//i.test(link))throw Error('DHL takip linki doğrulanamadı');\nconst titles={1:'📦 Gönderiniz hazırlandı!',2:'🚛 Kargonuz yola çıktı!',3:'🏢 Kargonuz varış şubesine ulaştı!',4:'🚚 Kargonuz dağıtıma çıktı!'};\nconst lines=[titles[stage],'👋 Merhaba '+p.ad_soyad+',','🧾 Sipariş No: '+q.order_no,'📦 Parça adedi: '+pieces];\nif(stage===1)lines.push('⏳ DHL’nin kargoyu teslim alması bekleniyor.','🔔 DHL kargoyu teslim aldığında takip bilgilerinizi ve tahmini teslim süresini ayrıca paylaşacağız.');\nif(stage!==1)lines.push('🔎 Takip bilgisi: '+q.shipment_id);\nif(stage===2)lines.push('🗓️ Tahmini teslim süresi: Normal koşullarda 1–3 iş günü (genel tahmin; uzak bölgelere göre değişebilir).');\nif(stage===3){lines.push('📍 Şube: '+(branch.locationAddress||branch.location||'DHL henüz bildirmedi.'));const phones=branchPhones(branch.locationPhone);lines.push('☎️ Şube telefonu:');lines.push(...(phones.length?phones:['DHL henüz bildirmedi.']));lines.push(p.subeden_teslim?'🏢 Siparişiniz şubeden teslim alınacaktır. Gitmeden önce şubeyle görüşebilirsiniz.':'🔔 Adresinize dağıtım aşamasına geçtiğinde ayrıca bilgi vereceğiz.');}\nif(stage===4)lines.push('📱 Teslimat için telefonunuzu ulaşılabilir tutmanızı rica ederiz.');\nif(stage!==1)lines.push('🔗 Kargo takibi: '+link);\nlines.push('','🌿 Gazioğulları Çiftliği');\nreturn {json:{...q,pieces,message:lines.join('\\n')}};"
+      },
+      "id": "defb5912-822d-4a07-9aaa-3e60c13a0e92",
+      "name": "Mesajı Hazırla ve Alıcıyı Doğrula",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        256
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "gazi-oto",
+        "remoteJid": "={{ $json.recipient }}",
+        "messageText": "={{ $json.message }}",
+        "options_message": {
+          "linkPreview": false
+        }
+      },
+      "id": "c8605aa7-ebf0-4db2-81c7-97a488ecd163",
+      "name": "Gazi Oto WhatsApp Gönder",
+      "type": "n8n-nodes-evolution-api-en.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        160
+      ],
+      "retryOnFail": false,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "evolutionApi": {
+          "id": "QagyM5zy7wyJJsIp",
+          "name": "gazi-oto"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const q=$('Mesajı Hazırla ve Alıcıyı Doğrula').item.json,r=$json,body=r.data?.data||r.data||r,id=body.key?.id,jid=body.key?.remoteJid;const ok=typeof id==='string'&&id.length>0&&jid===q.recipient+'@s.whatsapp.net'&&body.key?.fromMe===true&&body.instanceId==='7909a018-f11b-4371-b412-06cf0e9a88e7';return {json:{p_id:q.id,p_message_id:ok?id:null,p_text:q.message,p_error:ok?null:JSON.stringify(r).slice(0,1500)}};"
+      },
+      "id": "5d6e28f9-ea87-445d-842d-5b7e3e5a88e8",
+      "name": "Gönderim Yanıtını Doğrula",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://jarsxtpqzqzhlshpmgot.supabase.co/rest/v1/rpc/gazi_wp_finish",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "ed396e46-9ea7-41e9-8e04-09e66a9343ed",
+      "name": "Gönderim Kaydını Tamamla",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1696,
+        256
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "BBA8YSbXFzA6xcvt",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "otomasyon",
+        "options": {
+          "onlyRunIf": "={{ false }}"
+        }
+      },
+      "id": "752972a3-5c44-4877-ba80-e2b24b2e263d",
+      "name": "Evolution Otomasyon Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        832
+      ],
+      "webhookId": "400b3100-b85f-4a9b-9598-96a452c9e67c"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b=$input.first().json.body||{};return [{json:{accepted:b.instance==='gazi-oto',instance:b.instance==='gazi-oto'?'gazi-oto':'ignored',event:String(b.event||''),note:'Evolution olayları kargo bildirimi başlatmaz. Bildirimler DHL veritabanı güncellemelerinden oluşur.'}}];"
+      },
+      "id": "15de900a-a996-4bac-b19a-d85874b80038",
+      "name": "Evolution Olayını Ayır",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        832
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const q=$('Bekleyen Bildirimleri Kilitle').item.json;return {json:{p_id:q.id,p_message_id:null,p_text:'',p_error:String($json.error?.message||$json.message||'Mesaj doğrulaması başarısız; gönderilmedi').slice(0,1000)}};"
+      },
+      "id": "4a32bf9a-5ff4-4a8b-b62e-a24d80a9b7e5",
+      "name": "Doğrulama Hatasını Kaydet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "fetch-instances",
+        "instanceName": "gazi-oto"
+      },
+      "id": "d3006f0d-add7-419b-9a53-a835b115e446",
+      "name": "Gazi Oto Bağlantı Kontrol",
+      "type": "n8n-nodes-evolution-api-en.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        288,
+        256
+      ],
+      "credentials": {
+        "evolutionApi": {
+          "id": "QagyM5zy7wyJJsIp",
+          "name": "gazi-oto"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r=$input.first().json;const list=Array.isArray(r.data)?r.data:Array.isArray(r)?r:[];const instance=list.find(x=>x.name==='gazi-oto'&&x.id==='7909a018-f11b-4371-b412-06cf0e9a88e7');if(!instance||instance.connectionStatus!=='open')return [];if(String(instance.number)!=='905542474500')throw Error('gazi-oto gönderici hattı değişmiş; otomatik gönderim durduruldu');return [{json:{instance:'gazi-oto',connected:true}}];"
+      },
+      "id": "a16e8e7e-c4cb-4f64-b5b1-e5f88fbaf505",
+      "name": "Gazi Oto Bağlantısını Doğrula",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        256
+      ]
+    },
+    {
+      "id": "a317d930-1724-4257-b22d-93823f72d9d2",
+      "name": "Kargo Aşaması Güncellendi",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        256
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gazi-kargo-bildirim",
+        "responseMode": "onReceived",
+        "options": {
+          "noResponseBody": true,
+          "onlyRunIf": "={{ /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String($json.body?.outbox_id || '')) }}"
+        }
+      },
+      "webhookId": "6efd3bde-2b50-464e-a95b-f4523f06272c"
+    },
+    {
+      "id": "81afae8e-f008-473a-b042-4e46df2864df",
+      "name": "Kargo Olayını Doğrula",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        256
+      ],
+      "parameters": {
+        "jsCode": "return $input.all().flatMap((item,index)=>{const id=String(item.json.body?.outbox_id||'');return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)?[{json:{outbox_id:id},pairedItem:{item:index}}]:[];});"
+      }
+    }
+  ],
+  "connections": {
+    "Bekleyen Bildirimleri Kilitle": {
+      "main": [
+        [
+          {
+            "node": "Mesajı Hazırla ve Alıcıyı Doğrula",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gazi Oto WhatsApp Gönder": {
+      "main": [
+        [
+          {
+            "node": "Gönderim Yanıtını Doğrula",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gönderim Yanıtını Doğrula": {
+      "main": [
+        [
+          {
+            "node": "Gönderim Kaydını Tamamla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evolution Otomasyon Webhook": {
+      "main": [
+        [
+          {
+            "node": "Evolution Olayını Ayır",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mesajı Hazırla ve Alıcıyı Doğrula": {
+      "main": [
+        [
+          {
+            "node": "Gazi Oto WhatsApp Gönder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Doğrulama Hatasını Kaydet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Doğrulama Hatasını Kaydet": {
+      "main": [
+        [
+          {
+            "node": "Gönderim Kaydını Tamamla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gazi Oto Bağlantı Kontrol": {
+      "main": [
+        [
+          {
+            "node": "Gazi Oto Bağlantısını Doğrula",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gazi Oto Bağlantısını Doğrula": {
+      "main": [
+        [
+          {
+            "node": "Bekleyen Bildirimleri Kilitle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kargo Aşaması Güncellendi": {
+      "main": [
+        [
+          {
+            "node": "Kargo Olayını Doğrula",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kargo Olayını Doğrula": {
+      "main": [
+        [
+          {
+            "node": "Gazi Oto Bağlantı Kontrol",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timezone": "Europe/Istanbul",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "executionTimeout": 120,
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [
+    {
+      "id": "f4cf8b49-e68b-458a-92df-906efb10c14a",
+      "name": "DHL Güncellemesi Sonrası Tek Seferlik Bildirim",
+      "nodeNames": [
+        "Bekleyen Bildirimleri Kilitle",
+        "Mesajı Hazırla ve Alıcıyı Doğrula",
+        "Gazi Oto WhatsApp Gönder",
+        "Gönderim Yanıtını Doğrula",
+        "Doğrulama Hatasını Kaydet",
+        "Gönderim Kaydını Tamamla"
+      ],
+      "description": "Güncel sipariş ve alıcı doğrulaması → tek seferlik gazi-oto bildirimi → gönderim veya hata kaydı."
+    },
+    {
+      "id": "d8d33aef-f523-4b7e-90b6-e0df006eee2b",
+      "name": "Gönderici Hattı Kontrolü",
+      "nodeNames": [
+        "Gazi Oto Bağlantı Kontrol",
+        "Gazi Oto Bağlantısını Doğrula"
+      ],
+      "description": "gazi-oto açık ve doğru numaraya bağlı değilse mesaj kuyruğuna dokunmadan durur."
+    }
+  ]
+}

@@ -39,3 +39,9 @@ Bölme atomiktir: mevcut kayıt birinci bölüm olarak kalır, ikinci kayıt ort
 Kurulum: `supabase/migrations/20261022194329_gazi_order_split.sql` (eşdeğer kaynak: `supabase/gazi-order-split.sql`) panel dosyalarından önce uygulanmalıdır. RPC mevcut Gazi yönetici yetkisini ve RLS'yi kullanır; satıcı hesaplarına bölme yetkisi verilmez.
 
 Doğrulama: `node tests/order-split.test.cjs`, `node tests/order-split-db.cjs` (geliştirme bağımlılığı `@electric-sql/pglite@0.5.11`), `node tests/order-split-browser.cjs` (Playwright Chromium/WebKit). Veritabanı testi gerçek siparişlere dokunmadan yerel Postgres üzerinde çalışır.
+
+### Kargo WhatsApp bildirimleri — olayla tetikleme
+
+`GAZI KARGO WHATSAPP — CANLI` akışında zamanlayıcı bulunmaz. `gazi_notify.capture()` yalnız yeni gönderi/aşama için tekil bildirim kaydı oluşturur. `gazi_wp_dispatch_on_change` tetikleyicisi, işlem tamamlandıktan sonra `gazi-kargo-bildirim` webhook'una sadece o kaydın kimliğini iletir. İşçi `gazi_wp_claim(uuid)` ile yalnız bu kaydı kilitler. Değişmeyen hareket ve gönderilmiş aşama yeni mesaj üretmez. Test kayıtları canlı webhook'u tetiklemez. Evolution'ın `/otomasyon` olayları 200 ile karşılanır ve bildirim akışını başlatmaz. Bağlantı/işleme sorunu olan kayıtlar saklanır; dakikalık kontrol veya otomatik yeniden deneme yoktur.
+
+Kaynaklar: `supabase/gazi_event_notifications.sql`, `n8n/gazi-cargo-event-notifications.json`. Geri alınan gerçek güncelleme testi: `tests/event-notifications.sql`.
