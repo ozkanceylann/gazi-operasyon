@@ -1744,13 +1744,13 @@ async function enterEditMode(){
 
         <div class="form-field">
           <label>Şehir</label>
-          <select id="sehir_select"></select>
+          <select id="sehir_select" required></select>
           <input id="sehir" type="hidden" value="${d.sehir ?? ""}">
         </div>
 
         <div class="form-field">
           <label>İlçe</label>
-          <select id="ilce_select"></select>
+          <select id="ilce_select" required></select>
           <input id="ilce" type="hidden" value="${d.ilce ?? ""}">
         </div>
 
@@ -1827,11 +1827,27 @@ async function saveEdit(){
   const citySelect = document.getElementById("sehir_select");
   const districtSelect = document.getElementById("ilce_select");
 
-  const sehirName = citySelect?.selectedOptions?.[0]?.textContent || (document.getElementById("sehir")?.value ?? "");
-  const ilceName  = districtSelect?.selectedOptions?.[0]?.textContent || (document.getElementById("ilce")?.value ?? "");
-
-  const sehirKoduVal = citySelect?.value || document.getElementById("sehir_kodu")?.value || null;
-  const ilceKoduVal  = districtSelect?.selectedOptions?.[0]?.dataset.code || document.getElementById("ilce_kodu")?.value || null;
+  const delivery = document.getElementById("delivery_select")?.value;
+  if (!["true", "false"].includes(delivery)) return toast("Adrese teslim veya Şubeden teslim seçin.", 6000);
+  if (!citySelect?.value || citySelect.disabled) {
+    citySelect?.focus();
+    return toast("Devam etmek için il seçin.", 6000);
+  }
+  const districtOption = districtSelect?.selectedOptions?.[0];
+  if (!districtSelect?.value || districtSelect.disabled || !districtOption?.dataset.code) {
+    districtSelect?.focus();
+    return toast("Devam etmek için ilçe seçin.", 6000);
+  }
+  const deliveryLocked = !!(selectedOrder.orderinvoiceid || selectedOrder.kargo_takip_kodu);
+  const branchName = document.getElementById("delivery_branch")?.value.trim();
+  if (delivery === "true" && (!branchName || !branchSelector?.valid())) {
+    document.getElementById("delivery_branch_select")?.focus();
+    return toast(deliveryLocked ? "Teslim alınacak DHL şubesi eksik. Mevcut DHL kaydını iptal edip şube seçin." : "Teslim alınacak DHL şubesini listeden seçin.", 6000);
+  }
+  const sehirName = citySelect.selectedOptions[0].textContent;
+  const ilceName = districtOption.textContent;
+  const sehirKoduVal = citySelect.value;
+  const ilceKoduVal = districtOption.dataset.code;
 
   let normalizedKg;
   try { normalizedKg = CargoWeights.normalize(kargo_kg.value, kargo_adet.value); }
@@ -1845,9 +1861,6 @@ async function saveEdit(){
     odeme_sekli: odeme_sekli.value, notlar: notlar.value
   };
   if (!(selectedOrder.orderinvoiceid || selectedOrder.kargo_takip_kodu)) {
-    const delivery = document.getElementById("delivery_select")?.value;
-    if (!["true", "false"].includes(delivery)) return toast("Adrese teslim veya Şubeden teslim seçin.", 6000);
-    if(delivery === "true" && !branchSelector?.valid())return toast("Teslim alınacak DHL şubesini listeden seçin.",6000);
     updated.subeden_teslim = delivery === "true";
     updated.teslim_subesi = updated.subeden_teslim ? document.getElementById("delivery_branch").value.trim() || null : null;
     updated.teslim_sekli_kontrol = false;
