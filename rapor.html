@@ -100,11 +100,23 @@
     </div>
 
     <div class="report-panel">
-      <h3>Siparişi alan kişiler</h3>
+      <h3>Siparişi alan kişiler · Sipariş ve parça</h3>
       <div class="report-chart-area"><canvas id="salesByTel" aria-label="Siparişi alan kişiler" role="img"></canvas></div>
     </div>
 
 
+    <div class="report-panel">
+      <h3>Kişi bazlı ciro</h3>
+      <p>Seçilen tarih ve durum filtresi · İptal dışındaki sipariş tutarlarıdır; tahsilat değildir.</p>
+      <div class="report-chart-area"><canvas id="revenueByPerson" aria-label="Kişi bazlı ciro, TL" role="img"></canvas></div>
+    </div>
+    <div class="table-wrapper">
+      <table class="orders-table"><caption>Kişi bazlı satış özeti</caption>
+        <thead><tr><th>Kişi</th><th>Sipariş</th><th>Parça</th><th>Ciro (TL)</th></tr></thead>
+        <tbody id="peopleSummary"></tbody>
+      </table>
+      <p>Sipariş ve parça sayıları seçilen filtredeki tüm kayıtları kapsar. Ciroya iptal edilen siparişler dahil değildir.</p>
+    </div>
     <section class="report-extra-grid" aria-label="Ek satış raporları">
       <article class="report-chart-card"><h3>En çok satılan ürünler</h3><p>İptal dışındaki kayıtlarda ürünü içeren sipariş sayısı. Ürün açıklamalarına göre ilk 10.</p><div class="report-chart-area"><canvas id="productChart" aria-label="En çok satılan ürünler" role="img"></canvas></div></article>
       <article class="report-chart-card"><h3>Sipariş durumları</h3><p>Seçili dönemin durum dağılımı.</p><div class="report-chart-area"><canvas id="statusChart" aria-label="Sipariş durumları" role="img"></canvas></div></article>
@@ -253,7 +265,7 @@
     try {
       const rows = [], size = 500;
       for (let offset = 0;;offset += size) {
-        let q = db.from(TABLE).select("siparis_no,ad_soyad,toplam_tutar,kargo_durumu,tarih,siparis_alan,siparis_tel,urun_bilgisi,sehir,shipmentStatusCode,isDelivered")
+        let q = db.from(TABLE).select("siparis_no,ad_soyad,toplam_tutar,kargo_durumu,tarih,siparis_alan,siparis_tel,kargo_adet,urun_bilgisi,sehir,shipmentStatusCode,isDelivered")
           .or("kargo_durumu.is.null,kargo_durumu.neq.Silindi");
         if(s) q=q.gte("tarih", s);
         if(e) {
@@ -312,22 +324,30 @@
     try{const parsed=JSON.parse(text);if(Array.isArray(parsed))return parsed.map(String);}catch{}
     return text.split(/\n|;/).map(x=>x.trim()).filter(Boolean);
   }
+  function reportParcels(value) {
+    const text=String(value??"").trim();
+    return /^[0-9]{1,9}$/.test(text)?Number(text):0;
+  }
   function aggregateReport(rows) {
-    const daily=new Map(),people=new Map(),products=new Map(),statuses=new Map(),cities=new Map(),amounts=new Map();
+    const daily=new Map(),people=new Map(),products=new Map(),statuses=new Map(),cities=new Map(),amounts=new Map(),parcels=new Map(),revenue=new Map();
     const add=(map,key,n=1)=>map.set(key,(map.get(key)||0)+n);
     for(const r of rows){
       const day=String(r.tarih||"").slice(0,10);
       if(day)add(daily,day);
-      add(people,takerLabel(r));
+      const person=takerLabel(r);
+      add(people,person);
+      add(parcels,person,reportParcels(r.kargo_adet));
+      add(revenue,person,0);
       const status=r.isDelivered||Number(r.shipmentStatusCode)===5?"Teslim edildi":r.kargo_durumu||"Tanımsız";
       add(statuses,status);
       if(r.sehir)add(cities,String(r.sehir).trim().toLocaleUpperCase("tr-TR"));
       if(r.kargo_durumu==="İptal")continue;
+      add(revenue,person,parseAmount(r.toplam_tutar));
       if(day)add(amounts,day,parseAmount(r.toplam_tutar));
       const unique=new Set(productNames(r.urun_bilgisi).map(x=>x.trim().replace(/\s+/g," ").toLocaleLowerCase("tr-TR")));
       for(const product of unique)if(product)add(products,product);
     }
-    return {daily,people,products,statuses,cities,amounts};
+    return {daily,people,products,statuses,cities,amounts,parcels,revenue};
   }
   function ensureChartLibrary(){
     if(window.Chart)return Promise.resolve();
@@ -360,15 +380,27 @@
     for(const chart of chartInstances.values())chart.destroy();
     chartInstances.clear();chartSpecs.clear();
     const data=aggregateReport(rows);
-    const make=(id,map,label,type="bar",top=false)=>{
-      const entries=top?[...map].sort((a,b)=>b[1]-a[1]).slice(0,10):[...map].sort((a,b)=>a[0].localeCompare(b[0],"tr"));
+    document.getElementById("peopleSummary").innerHTML=[...data.people].sort((a,b)=>(data.revenue.get(b[0])-data.revenue.get(a[0]))||a[0].localeCompare(b[0],"tr")).map(([person,count])=>`<tr><td>${escapeReport(person)}</td><td>${count.toLocaleString("tr-TR")}</td><td>${data.parcels.get(person).toLocaleString("tr-TR")}</td><td>${data.revenue.get(person).toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`).join("")||'<tr><td colspan="4">Kayıt yok</td></tr>';
+    const make=(id,map,label,type="bar",top=false,limit=10)=>{
+      const entries=top?[...map].sort((a,b)=>b[1]-a[1]).slice(0,limit):[...map].sort((a,b)=>a[0].localeCompare(b[0],"tr"));
       chartSpecs.set(id,{type,data:{labels:entries.map(x=>x[0]),datasets:[{label,data:entries.map(x=>x[1]),backgroundColor:type==="line"?"#56866b22":chartColors,borderColor:type==="line"?"#56866b":chartColors,borderWidth:2,tension:.2}]},
         options:{responsive:true,maintainAspectRatio:false,animation:false,normalized:true,
           indexAxis:top?"y":"x",plugins:{legend:{display:type==="doughnut"}},
           ...(type==="doughnut"?{}:{scales:{[top?"x":"y"]:{beginAtZero:true}}})}});
     };
     make("dailyChart",data.daily,"Sipariş sayısı","line");
-    make("salesByTel",data.people,"Sipariş sayısı","bar",true);
+    make("salesByTel",data.people,"Sipariş sayısı","bar",true,Infinity);
+    const personChart=chartSpecs.get("salesByTel");
+    personChart.data.datasets[0].backgroundColor="#56866b";
+    personChart.data.datasets.push({label:"Parça adedi",data:personChart.data.labels.map(person=>data.parcels.get(person)||0),backgroundColor:"#c9a456",borderColor:"#c9a456",borderWidth:2});
+    personChart.options.plugins.legend.display=true;
+    personChart.options.scales.x.ticks={precision:0};
+    make("revenueByPerson",data.revenue,"Ciro (TL)","bar",true,Infinity);
+    const revenueChart=chartSpecs.get("revenueByPerson");
+    const money=value=>Number(value).toLocaleString("tr-TR",{style:"currency",currency:"TRY"});
+    revenueChart.options.plugins.tooltip={callbacks:{label:context=>"Ciro: "+money(context.parsed.x)}};
+    revenueChart.options.scales.x.ticks={callback:money};
+    for(const id of ["salesByTel","revenueByPerson"])document.getElementById(id).parentElement.style.height=Math.max(300,data.people.size*56)+"px";
     make("productChart",data.products,"Ürünü içeren sipariş","bar",true);
     make("statusChart",data.statuses,"Sipariş sayısı","doughnut");
     make("cityChart",data.cities,"Sipariş sayısı","bar",true);
