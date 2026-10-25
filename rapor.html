@@ -38,6 +38,13 @@
     .report-chart-card p{font-size:12px;line-height:1.5;color:#718176;margin:0 0 14px}
     .report-chart-area{position:relative;height:300px;min-width:0}
     .report-chart-area[data-chart-error]::after{content:attr(data-chart-error);color:#8d4242;font-size:13px}
+    .orders-page .report-people-summary .orders-table { background:var(--ui-card); }
+    .orders-page .report-people-summary caption { text-align:left; color:#c4d3be; font-size:16px; font-weight:700; padding:0 0 16px; }
+    .orders-page .orders-table #peopleSummary tr,
+    .orders-page .orders-table #peopleSummary tr:nth-child(even) { background:var(--ui-card); }
+    .orders-page .orders-table #peopleSummary td { color:var(--ui-ink); background:transparent; border-color:var(--ui-line); }
+    .orders-page .orders-table #peopleSummary tr:hover td { background:#304c37 !important; }
+    .orders-page .report-people-summary p { color:var(--ui-muted); font-size:12px; line-height:1.5; margin:14px 0 0; }
     #reportMore[hidden]{display:none}
     @media(max-width:800px){.report-extra-grid{grid-template-columns:minmax(0,1fr)}}
   </style>
@@ -110,7 +117,7 @@
       <p>Seçilen tarih ve durum filtresi · İptal dışındaki sipariş tutarlarıdır; tahsilat değildir.</p>
       <div class="report-chart-area"><canvas id="revenueByPerson" aria-label="Kişi bazlı ciro, TL" role="img"></canvas></div>
     </div>
-    <div class="table-wrapper">
+    <div class="table-wrapper report-panel report-people-summary">
       <table class="orders-table"><caption>Kişi bazlı satış özeti</caption>
         <thead><tr><th>Kişi</th><th>Sipariş</th><th>Parça</th><th>Ciro (TL)</th></tr></thead>
         <tbody id="peopleSummary"></tbody>
