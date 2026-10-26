@@ -12,6 +12,9 @@ vm.createContext(context);vm.runInContext(section+'\nthis.run=refreshOperationCo
  const receiptFilters=[];context.receiptQuery={eq:(key,value)=>{receiptFilters.push([key,value]);return context.receiptQuery;}};
  vm.runInContext('applyTabFilter(receiptQuery,"dekont","receipt")',context);
  assert.deepEqual(receiptFilters,[["dekont_bekliyor",true]],'Receipt queue must use the shared server-side predicate without cargo tab restrictions');
+ const missingFilters=[];context.missingQuery={eq:(k,v)=>{missingFilters.push([k,v]);return context.missingQuery;},in:(k,v)=>{missingFilters.push([k,Array.from(v)]);return context.missingQuery;}};
+ vm.runInContext('missingOperationIds=[9,8];applyTabFilter(missingQuery,"bekleyen","missing")',context);
+ assert.deepEqual(missingFilters,[["kargo_durumu","Bekliyor"],["siparis_no",[9,8]]],'Missing-info filter includes only pending queue ids');
  await context.run();assert.equal(calls,1);assert.equal(values.prepare.textContent,'0');assert.equal(parcels.prepare.textContent,'0 parça');
  for(const k of keys.slice(1)){assert.equal(values[k].textContent,'1.234');assert.equal(parcels[k].textContent,'2.468 parça');}
  await context.run(false);assert.equal(calls,1);
