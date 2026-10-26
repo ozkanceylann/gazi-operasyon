@@ -2,7 +2,7 @@
 const OrderReceipts=(()=>{
  const OPERATIONS=true;
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const required=o=>/\b(eft|iban|havale|fast)\b/i.test(String(o.odeme_sekli||'')+' '+String(o.notlar||''));
+ const required=o=>o.dekont_gecmis_onayli!==true&&/\b(eft|iban|havale|fast)\b/i.test(String(o.odeme_sekli||'')+' '+String(o.notlar||''));
  const states={pending:'🟡 Kontrol bekliyor',approved:'✅ Onaylandı',rejected:'🔴 Kontrol gerekli'};
  async function load(db,orders){
  for(const o of orders)o.receipts=undefined;
@@ -13,6 +13,7 @@ const OrderReceipts=(()=>{
  }catch{for(const o of orders)o.receiptError=true;}
  }
  function badge(o){
+ if(o.dekont_gecmis_onayli===true)return '<span class="receipt-badge" title="15 Ekim 2026 öncesi EFT / ücretsiz sipariş: eski dönem dekont onayı">✅ Onaylandı · Eski dönem</span>';
  if(!required(o)&&!o.receipts?.length)return '';
  if(!Array.isArray(o.receipts))return '<span class="receipt-badge">Dekont durumu alınamadı</span>';
  const state=!o.receipts.length?'⚠️ Dekont eksik':o.receipts.some(r=>r.status==='rejected')?states.rejected:o.receipts.some(r=>r.status==='pending')?states.pending:states.approved;

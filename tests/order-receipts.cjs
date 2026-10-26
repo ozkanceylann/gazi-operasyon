@@ -1,6 +1,9 @@
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const ctx={console,URL,Number,String,Set,FormData};vm.createContext(ctx);vm.runInContext(fs.readFileSync('order-receipts.js','utf8')+';globalThis.receipts=OrderReceipts',ctx);const r=ctx.receipts;
 for(const payment of ['EFT','IBAN','Havale','FAST'])assert(r.required({odeme_sekli:payment}));
+assert(r.badge({dekont_gecmis_onayli:true,odeme_sekli:'EFT',receipts:[]}).includes('Onaylandı'));
+assert(r.badge({dekont_gecmis_onayli:true,receipts:[{status:'rejected'}]}).includes('Eski dönem'));
+assert(!r.required({dekont_gecmis_onayli:true,odeme_sekli:'EFT'}));
 assert(!r.required({odeme_sekli:'Kapıda Nakit'}));assert(!r.required({odeme_sekli:'Bedelsiz'}));assert(r.required({odeme_sekli:'Kapıda Kart',notlar:'1000 EFT, kalan 500 kapıda'}));
 assert(r.badge({odeme_sekli:'EFT',receipts:[]}).includes('Dekont eksik'));assert(!r.badge({odeme_sekli:'Kapıda Kart',receipts:[]}));assert(r.badge({odeme_sekli:'EFT'}).includes('alınamadı'));
 for(const [state,text] of [['pending','Kontrol bekliyor'],['approved','Onaylandı'],['rejected','Kontrol gerekli']])assert(r.badge({receipts:[{status:state}]}).includes(text));
