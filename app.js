@@ -230,6 +230,7 @@ const OPERATION_CARDS = {
   receipt: {tab:"dekont", title:"Dekont Bekleyen Siparişler"}
 };
 function applyOperationFilter(query, key){
+  if(key==="missing")return query.in("siparis_no",missingOperationIds.length?missingOperationIds:[-1]);
   if(key==="receipt")return query.eq("dekont_bekliyor",true);
   if(key!=="label" && key!=="handover")return query;
   query=query.or(cargoStateFilter("created"));
@@ -241,8 +242,10 @@ let missingOperationIds=[],missingOperationActive=false,missingOperationBusy=fal
 function renderMissingOperationNotice(){
   const slot=document.getElementById("missingOperationSlot");
   if(!slot)return;
-  slot.innerHTML=missingOperationIds.length?`<button class="missing-operation-notice" type="button" onclick="openNextMissingOperation()"><span aria-hidden="true">⚠</span><span>Eksik bilgili sipariş var<small>${missingOperationIds.length} bekleyen sipariş · Kontrol et</small></span></button>`:"";
+  slot.innerHTML=missingOperationIds.length?`<button class="missing-operation-notice" type="button" onclick="openMissingOperationQueue()"><span aria-hidden="true">⚠</span><span>Eksik bilgili sipariş var<small>${missingOperationIds.length} bekleyen sipariş · Kontrol et</small></span></button>`:"";
 }
+function openMissingOperationQueue(){setTab("bekleyen","missing");}
+window.openMissingOperationQueue=openMissingOperationQueue;
 function missingOperationNavigation(){
   return missingOperationActive&&missingOperationIds.length?`<div class="missing-operation-navigation"><span>Eksik bilgili ${missingOperationIds.length} bekleyen sipariş</span><button type="button" onclick="openNextMissingOperation()">Sıradaki ›</button></div>`:"";
 }
@@ -621,6 +624,8 @@ function missingDeliveryFields(order){
   if(order.teslim_sekli_kontrol===true||order.subeden_teslim==null||/^(teslim( şekli)? seç(in|iniz)?|seç(in|iniz)?)$/i.test(String(order.teslim_subesi??" ").trim().toLocaleLowerCase("tr-TR")))fields.push("Teslim şekli seçilmeli");
   if(empty(order.sehir))fields.push("İl eksik");
   if(empty(order.ilce))fields.push("İlçe eksik");
+  if(empty(order.sehir_kodu))fields.push("İl kodu eksik");
+  if(empty(order.ilce_kodu))fields.push("İlçe kodu eksik");
   if(order.subeden_teslim===true){
     if(empty(order.teslim_subesi)||/^(dhl( kargo)?( şubesi)?|kargo( şubesi)?|şube( seç(in|iniz)?)?|teslim alınacak (dhl )?şube(si)?|seç(in|iniz)?)$/i.test(String(order.teslim_subesi).trim().replace(/\s+/g," ").toLocaleLowerCase("tr-TR")))fields.push("Teslim şubesi eksik");
   }else if(empty(order.adres))fields.push("Adres eksik");
@@ -2618,12 +2623,12 @@ function updateListHeading(search, summary) {
   const title = document.getElementById("pageTitle");
   const info = document.getElementById("listSummary");
   const cargoTitles={all:"Tüm Kargolar",created:"Hazırlandı · Tüm Kargolar",transit:"Yolda · Tüm Kargolar",delivery:"Dağıtımda · Tüm Kargolar",delivered:"Teslim Edildi · Tüm Kargolar",problem:"Sorun · Tüm Kargolar",return:"Geri Geliyor · Tüm Kargolar"};
-  if (title) title.textContent = search ? "Arama Sonuçları" : (cargoFilterGlobal ? cargoTitles[cargoFilter] : OPERATION_CARDS[operationFilter]?.title || titles[currentTab]);
+  if (title) title.textContent = search ? "Arama Sonuçları" : (cargoFilterGlobal ? cargoTitles[cargoFilter] : OPERATION_CARDS[operationFilter]?.title || (operationFilter==="missing"?"Eksik Bilgili Bekleyen Siparişler":titles[currentTab]));
   if (info) info.textContent = summary;
 }
 
 function setTab(tab, operation="", forceCounts=false){
-  operationFilter=OPERATION_CARDS[operation]?.tab===tab ? operation : "";
+  operationFilter=operation==="missing"&&tab==="bekleyen"?"missing":OPERATION_CARDS[operation]?.tab===tab ? operation : "";
   document.querySelectorAll("[data-operation]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.operation===operationFilter)));
   document.getElementById("searchInput").value = "";
   document.getElementById("tabSearchInput").value = "";
