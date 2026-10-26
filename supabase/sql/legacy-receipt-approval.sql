@@ -96,3 +96,29 @@ $function$
 ;
 notify pgrst,'reload schema';
 
+-- A generated value is computed after BEFORE triggers; exclude it from writable-field comparisons.
+CREATE OR REPLACE FUNCTION public.seller_guard_order_update()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO ''
+AS $function$
+DECLARE allowed text[]:=array['dekont_gecmis_onayli','ad_soyad','musteri_tel','adres','sehir','ilce','sehir_kodu','ilce_kodu','urun_bilgisi','toplam_tutar','odeme_sekli','notlar','kargo_adet','kargo_kg','subeden_teslim','teslim_subesi','teslim_sekli_kontrol'];
+BEGIN
+ IF nullif(old.orderinvoiceid,'') IS NOT NULL AND (new.subeden_teslim IS DISTINCT FROM old.subeden_teslim OR new.teslim_subesi IS DISTINCT FROM old.teslim_subesi) THEN new.teslim_sekli_kontrol:=true; END IF;
+ IF auth.jwt()->'app_metadata'->>'role'='seller' THEN
+  IF old.kargo_durumu IS DISTINCT FROM 'Bekliyor' OR public.seller_owner_phone(old.siparis_alan,old.siparis_tel) IS DISTINCT FROM public.seller_current_phone() THEN RAISE EXCEPTION 'Yalnızca kendi bekleyen siparişinizi düzenleyebilirsiniz.' USING errcode='42501'; END IF;
+  IF new.kargo_durumu='İptal' THEN
+   IF public.seller_order_phase(old) IS DISTINCT FROM 'pending' OR nullif(trim(old.orderinvoiceid),'') IS NOT NULL OR nullif(trim(old.kargo_takip_kodu),'') IS NOT NULL OR nullif(trim(old.kargo_zpl),'') IS NOT NULL OR nullif(trim(old.zpl_base64),'') IS NOT NULL
+   THEN RAISE EXCEPTION 'Kargo işlemi başlamış sipariş mobil panelden iptal edilemez.' USING errcode='42501'; END IF;
+   IF char_length(trim(coalesce(new.iptal_nedeni,''))) NOT BETWEEN 3 AND 2000 THEN RAISE EXCEPTION 'İptal açıklaması 3–2000 karakter olmalı.'; END IF;
+   IF (to_jsonb(new)-array['dekont_gecmis_onayli','kargo_durumu','iptal_nedeni','iptal_tarihi']) IS DISTINCT FROM (to_jsonb(old)-array['dekont_gecmis_onayli','kargo_durumu','iptal_nedeni','iptal_tarihi'])
+   THEN RAISE EXCEPTION 'İptal sırasında diğer sipariş alanları değiştirilemez.' USING errcode='42501'; END IF;
+   new.iptal_nedeni:=trim(new.iptal_nedeni);
+   new.iptal_tarihi:=now() AT TIME ZONE 'Europe/Istanbul';
+  ELSIF (to_jsonb(new)-allowed) IS DISTINCT FROM (to_jsonb(old)-allowed) THEN RAISE EXCEPTION 'Sipariş sahipliği ve süreç alanları değiştirilemez.' USING errcode='42501'; END IF;
+ END IF;
+ RETURN new;
+END; $function$
+
+;
+
