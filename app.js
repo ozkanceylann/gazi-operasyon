@@ -226,9 +226,11 @@ const OPERATION_CARDS = {
   prepare: {tab:"bekleyen", title:"Hazırlanacak Siparişler"},
   label: {tab:"kargolandi", title:"Etiket Bekleyen Siparişler"},
   handover: {tab:"kargolandi", title:"DHL Teslim Alımı Bekleyen Siparişler"},
-  attention: {tab:"sorunlu", title:"Müdahale Gereken Siparişler"}
+  attention: {tab:"sorunlu", title:"Müdahale Gereken Siparişler"},
+  receipt: {tab:"dekont", title:"Dekont Bekleyen Siparişler"}
 };
 function applyOperationFilter(query, key){
+  if(key==="receipt")return query.eq("dekont_bekliyor",true);
   if(key!=="label" && key!=="handover")return query;
   query=query.or(cargoStateFilter("created"));
   return key==="handover"
