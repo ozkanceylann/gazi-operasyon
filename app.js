@@ -244,7 +244,13 @@ function renderMissingOperationNotice(){
   if(!slot)return;
   slot.innerHTML=missingOperationIds.length?`<button class="missing-operation-notice" type="button" onclick="openMissingOperationQueue()"><span aria-hidden="true">⚠</span><span>Eksik bilgili sipariş var<small>${missingOperationIds.length} bekleyen sipariş · Kontrol et</small></span></button>`:"";
 }
-function openMissingOperationQueue(){setTab("bekleyen","missing");}
+async function openMissingOperationQueue(){
+ const pending=setTab("bekleyen","missing"),request=listRequest;
+ await pending;
+ if(request!==listRequest||operationFilter!=="missing"||currentTab!=="bekleyen")return;
+ const behavior=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth';
+ (document.querySelector('#ordersBody tr[data-order-id]')||document.querySelector('.table-wrapper'))?.scrollIntoView({behavior,block:'center'});
+}
 window.openMissingOperationQueue=openMissingOperationQueue;
 function missingOperationNavigation(){
   return missingOperationActive&&missingOperationIds.length?`<div class="missing-operation-navigation"><span>Eksik bilgili ${missingOperationIds.length} bekleyen sipariş</span><button type="button" onclick="openNextMissingOperation()">Sıradaki ›</button></div>`:"";
@@ -2638,7 +2644,7 @@ function setTab(tab, operation="", forceCounts=false){
   document.querySelectorAll(".menu li:not(.menu-more)").forEach(li=>li.classList.remove("active"));
   const el = document.getElementById(`tab_${tab}`);
   if(el) el.classList.add("active");
-  loadOrders(true,forceCounts);
+  return loadOrders(true,forceCounts);
 }
 
 function loadMore(){
