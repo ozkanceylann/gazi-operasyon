@@ -18,8 +18,9 @@ if(s.kargo_durumu!=='Kargolandı' || (statusCode!==0&&statusCode!==1)
 
 
 const labelled=!!(String(s.kargo_zpl||'').trim()||String(s.zpl_base64||'').startsWith('JVBER')||Number(s.etiket_yazdirma_sayisi)>0||s.print===true);
+const confirmed=value=>value===true||value==='true';
 if(request.operation==='gonderi_iptal'&&labelled){
- if(body.labelCancellationConfirmed!==true||body.labelsDestructionConfirmed!==true)throw new Error('Etiketli kargo iptali ve etiketlerin imhası için iki ayrı onay gerekli.');
+ if(!confirmed(body.labelCancellationConfirmed)||!confirmed(body.labelsDestructionConfirmed))throw new Error('Etiketli kargo iptali ve etiketlerin imhası için iki ayrı onay gerekli.');
  if(String(body.expectedReference||'')!==String(s.kargo_siparis_no||'')||String(body.expectedShipment||'')!==String(s.kargo_takip_kodu||''))throw new Error('Gönderi onay sırasında değişti. Yeniden açıp kontrol edin.');
 }
 

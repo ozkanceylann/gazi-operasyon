@@ -18,6 +18,17 @@ async function scenario(answers,override={}){
  assert.throws(()=>run());assert.throws(()=>run({labelCancellationConfirmed:true}));
  const confirm={labelCancellationConfirmed:true,labelsDestructionConfirmed:true,expectedReference:'REF',expectedShipment:'123456789012'};
  assert.equal(run(confirm)[0].json.hasShipment,true);
+ const formConfirm=Object.fromEntries(new URLSearchParams(confirm));
+ assert.equal(run(formConfirm)[0].json.hasShipment,true);
+ for(const value of [false,'false','',undefined,null,1,'1','yes']){
+  assert.throws(()=>run({...formConfirm,labelCancellationConfirmed:value}));
+  assert.throws(()=>run({...formConfirm,labelsDestructionConfirmed:value}));
+ }
+ const record=new Function('$input','$',fs.readFileSync('n8n/cancellation-record.js','utf8'));
+ const saved=record({first:()=>({json:{statusCode:200,body:{messages:'İşlem Başarılı'}}})},name=>({first:()=>({json:name==='İptal · İptal · Sipariş Oku'?base:name==='İptal · Gazi Kargo Canlı'?{body:{reason:'test',...formConfirm}}:{operation:'gonderi_iptal'}})}))[0].json;
+ const audit=JSON.parse(saved.kargo_api_yanit).cancellation;
+ assert.equal(audit.labelCancellationConfirmed,true);assert.equal(audit.labelsDestructionConfirmed,true);
+
  assert.throws(()=>run({...confirm,expectedReference:'OLD'}));assert.throws(()=>run(confirm,{...base,shipmentStatusCode:2}));
  const live=new Function('$input','$',fs.readFileSync('n8n/cancellation-live-check.js','utf8'));
  assert.throws(()=>live({first:()=>({json:{statusCode:200,body:{shipmentStatusCode:2,shipmentId:'123456789012'}}})},()=>({first:()=>({json:{shipmentId:'123456789012'}})})));
