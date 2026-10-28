@@ -104,8 +104,8 @@
     <div id="summaryCards" style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px;"></div>
 
     <div class="report-panel">
-      <h3>📈 Günlük Sipariş</h3>
-      <div class="report-chart-area"><canvas id="dailyChart" aria-label="Günlük sipariş" role="img"></canvas></div>
+      <h3>📈 Günlük Sipariş ve Parça</h3>
+      <div class="report-chart-area"><canvas id="dailyChart" aria-label="Günlük sipariş ve parça sayısı" role="img"></canvas></div>
     </div>
 
     <div class="report-panel">
@@ -338,11 +338,11 @@
     return /^[0-9]{1,9}$/.test(text)?Number(text):0;
   }
   function aggregateReport(rows) {
-    const daily=new Map(),people=new Map(),products=new Map(),statuses=new Map(),cities=new Map(),amounts=new Map(),parcels=new Map(),revenue=new Map();
+    const daily=new Map(),dailyParcels=new Map(),people=new Map(),products=new Map(),statuses=new Map(),cities=new Map(),amounts=new Map(),parcels=new Map(),revenue=new Map();
     const add=(map,key,n=1)=>map.set(key,(map.get(key)||0)+n);
     for(const r of rows){
       const day=String(r.tarih||"").slice(0,10);
-      if(day)add(daily,day);
+      if(day){add(daily,day);add(dailyParcels,day,reportParcels(r.kargo_adet));}
       const person=takerLabel(r);
       add(people,person);
       add(parcels,person,reportParcels(r.kargo_adet));
@@ -356,7 +356,7 @@
       const unique=new Set(productNames(r.urun_bilgisi).map(x=>x.trim().replace(/\s+/g," ").toLocaleLowerCase("tr-TR")));
       for(const product of unique)if(product)add(products,product);
     }
-    return {daily,people,products,statuses,cities,amounts,parcels,revenue};
+    return {daily,dailyParcels,people,products,statuses,cities,amounts,parcels,revenue};
   }
   function ensureChartLibrary(){
     if(window.Chart)return Promise.resolve();
@@ -398,6 +398,11 @@
           ...(type==="doughnut"?{}:{scales:{[top?"x":"y"]:{beginAtZero:true}}})}});
     };
     make("dailyChart",data.daily,"Sipariş sayısı","line");
+    const dailyChart=chartSpecs.get("dailyChart");
+    dailyChart.data.datasets.push({label:"Parça sayısı",data:dailyChart.data.labels.map(day=>data.dailyParcels.get(day)||0),backgroundColor:"#c9a45622",borderColor:"#c9a456",borderWidth:2,tension:.2});
+    dailyChart.options.plugins.legend.display=true;
+    dailyChart.options.interaction={mode:"index",intersect:false};
+    dailyChart.options.scales.y.ticks={precision:0};
     make("salesByTel",data.people,"Sipariş sayısı","bar",true,Infinity);
     const personChart=chartSpecs.get("salesByTel");
     personChart.data.datasets[0].backgroundColor="#56866b";
