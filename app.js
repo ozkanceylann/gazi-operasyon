@@ -1184,7 +1184,8 @@ async function connectCargo(){
 }
 async function refreshCargoMovements(){
   if(cargoSyncBusy)return;
-  cargoSyncBusy=true;const button=document.getElementById("refreshCargoBtn");const status=document.getElementById("cargoSyncStatus");button.disabled=true;
+  cargoSyncBusy=true;const button=document.getElementById("refreshCargoBtn");const status=document.getElementById("cargoSyncStatus");const label=button.textContent;
+  button.disabled=true;button.setAttribute("aria-busy","true");button.textContent="Sorgulanıyor…";
   try{
     status.textContent="Kargo durumları toplu sorgulanıyor…";
     const url=CONFIG.webhooks.hareket_toplu||new URL("gazi_hareket_toplu",CONFIG.webhooks.hareket).href;
@@ -1196,7 +1197,7 @@ async function refreshCargoMovements(){
     if(selectedOrder&&document.getElementById("orderModal").style.display==="flex")await openOrder(selectedOrder.siparis_no);
     toast(result.has_more?"Geçmiş günler toplu güncellendi. Kalan günler için tekrar güncelleyin.":"Kargo durumları toplu güncellendi.",6000);
   }catch(error){status.textContent="Güncelleme tamamlanamadı: "+error.message;toast(error.message,8000);}
-  finally{cargoSyncBusy=false;button.disabled=false;}
+  finally{cargoSyncBusy=false;button.disabled=false;button.setAttribute("aria-busy","false");button.textContent=label;}
 }
 let cargoDetailBusy=false;
 async function refreshSelectedCargoMovements(id){
