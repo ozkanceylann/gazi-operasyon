@@ -672,15 +672,57 @@ function bindOrderCardSwipe(row){
 }
 
 
+const operationSupportOrders = new Map();
+let operationSupportToken=0;
+function needsSupportExplanation(o){return currentTab==='sorunlu'||['failed','support'].includes(cargoStatusInfo(o).key);}
+async function loadOperationSupportNotes(rows){
+ const eligible=rows.filter(needsSupportExplanation);
+ const tokens=new Map(eligible.map(o=>{o._supportToken=++operationSupportToken;operationSupportOrders.set(Number(o.siparis_no),o);return [o,o._supportToken];}));
+ for(let start=0;start<eligible.length;start+=100){
+  const batch=eligible.slice(start,start+100);
+  const {data,error}=await db.rpc('seller_support_notes',{p_order_ids:batch.map(o=>Number(o.siparis_no))});
+  for(const o of batch){if(o._supportToken!==tokens.get(o))continue;o._supportLoaded=!error;if(!error)o.support_note=data?.[String(o.siparis_no)]||null;}
+  if(error)throw error;
+ }
+}
+function operationSupportButton(o){
+ if(!needsSupportExplanation(o))return '';
+ const saved=!!String(o.support_note?.note||'').trim(),state=!o._supportLoaded?'unknown':saved?'saved':'missing';
+ const label=!o._supportLoaded?'Satış ekibi açıklamasını yükle':saved?'Satış ekibi açıklaması var':'Satış ekibi açıklaması yok';
+ return `<button type="button" class="operation-support-note operation-support-note--${state}" data-support-order="${Number(o.siparis_no)}" title="${label}" aria-label="${label}" onclick="event.stopPropagation();openOperationSupportNote(${Number(o.siparis_no)},this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 3h14v14H9l-4 4V3Z"/><path d="M8 7h8M8 11h6"/></svg></button>`;
+}
+let operationSupportDialogRequest=0;
+async function openOperationSupportNote(id,button){
+ const o=operationSupportOrders.get(Number(id));if(!o)return;
+ const root=document.getElementById('alertRoot');if(!root)return;
+ const request=++operationSupportDialogRequest;
+ root.querySelectorAll('.alert-backdrop').forEach(n=>n.remove());
+ const wrap=document.createElement('div');wrap.className='alert-backdrop';
+ wrap.innerHTML=`<section class="alert-card operation-support-dialog" role="dialog" aria-modal="true" aria-labelledby="operationSupportTitle"><div class="alert-title" id="operationSupportTitle">Satış ekibi açıklaması · #${Number(id)}</div><p>${escapeHtml(o.ad_soyad||'')}</p><div class="operation-support-content" role="status">Açıklama yükleniyor…</div><div class="alert-actions"><button type="button" class="btn-brand" data-support-close>Kapat</button></div></section>`;
+ const close=()=>{operationSupportDialogRequest++;wrap.remove();const target=root.ownerDocument.querySelector(`[data-support-order="${Number(id)}"]`);if(target)target.focus();};
+ wrap.querySelector('[data-support-close]').onclick=close;
+ wrap.onclick=e=>{if(e.target===wrap)close();};wrap.onkeydown=e=>{if(e.key==='Escape')close();if(e.key==='Tab'){e.preventDefault();wrap.querySelector('button').focus();}};
+ root.appendChild(wrap);wrap.querySelector('button').focus();
+ const content=wrap.querySelector('.operation-support-content');
+ try{
+  const {data,error}=await db.rpc('seller_support_notes',{p_order_ids:[Number(id)]});if(error)throw error;
+  if(request!==operationSupportDialogRequest||!wrap.isConnected)return;
+  const note=data?.[String(id)];content.textContent=note?.note||'Satış ekibi henüz açıklama eklememiş.';
+  if(note?.updated_at){const time=document.createElement('small');time.textContent='Son güncelleme: '+new Date(note.updated_at).toLocaleString('tr-TR');content.after(time);}
+  o.support_note=note||null;o._supportLoaded=true;o._supportToken=++operationSupportToken;
+  if(button?.isConnected)button.outerHTML=operationSupportButton(o);
+ }catch(error){if(wrap.isConnected)content.textContent='Açıklama alınamadı. Kapatıp yeniden deneyin.';}
+}
+
 let extrasToken=0;
-function markExtras(rows,kinds=['history','receipts','note']){for(const o of rows){o._extrasToken=++extrasToken;for(const kind of kinds)o['_loading_'+kind]=true;}}
+function markExtras(rows,kinds=['history','receipts','note','support']){for(const o of rows){o._extrasToken=++extrasToken;for(const kind of kinds)o['_loading_'+kind]=true;}}
 function extraContent(o,kind){
- if(o['_loading_'+kind])return kind==='note'?'':`<small role="status">${kind==='history'?'Sipariş geçmişi':kind==='receipts'?'Dekont durumu':'Müşteri notu'} yükleniyor…</small>`;
- const renderers={history:()=>CustomerOrderHistory.markup(o),receipts:()=>OrderReceipts.badge(o),note:()=>customerNoteCard(o),noteDetail:()=>customerNoteDetail(o)};return renderers[kind]();
+ if(o['_loading_'+kind])return kind==='support'?operationSupportButton(o):kind==='note'?'':`<small role="status">${kind==='history'?'Sipariş geçmişi':kind==='receipts'?'Dekont durumu':'Müşteri notu'} yükleniyor…</small>`;
+ const renderers={history:()=>CustomerOrderHistory.markup(o),receipts:()=>OrderReceipts.badge(o),note:()=>customerNoteCard(o),noteDetail:()=>customerNoteDetail(o),support:()=>operationSupportButton(o)};return renderers[kind]();
 }
 function extraSlot(o,kind){if(!o['_loading_'+kind])return extraContent(o,kind);return `<span class="order-extra" style="display:contents" data-order-extra="${kind}:${Number(o.siparis_no)}:${o._extrasToken}">${extraContent(o,kind)}</span>`;}
-async function hydrateExtras(rows,isCurrent,root,kinds=['history','receipts','note']){
- const loaders={history:()=>CustomerOrderHistory.load(db,rows),receipts:()=>OrderReceipts.load(db,rows),note:()=>loadCustomerNotes(rows),noteDetail:()=>loadCustomerNotes(rows)};
+async function hydrateExtras(rows,isCurrent,root,kinds=['history','receipts','note','support']){
+ const loaders={history:()=>CustomerOrderHistory.load(db,rows),receipts:()=>OrderReceipts.load(db,rows),note:()=>loadCustomerNotes(rows),noteDetail:()=>loadCustomerNotes(rows),support:()=>loadOperationSupportNotes(rows)};
  await Promise.allSettled(kinds.map(async kind=>{
   try{await loaders[kind]();}catch(error){console.warn('Ek sipariş bilgisi alınamadı',kind);}
   for(const o of rows)o['_loading_'+kind]=false;
@@ -782,7 +824,7 @@ tr.innerHTML = isPendingTab
   ${
     shouldShowNoteColumn(currentTab)
       ? noteChip
-      : (o.kargo_takip_kodu ?? "-")
+      : `<span class="order-code-support"><span>${escapeHtml(o.kargo_takip_kodu ?? "-")}</span>${extraSlot(o,'support')}</span>`
   }
 </td>
 
@@ -2709,6 +2751,7 @@ Object.assign(window, {
   queryCityDistrictCodes,
 deleteCanceledOrder,
 showNoteDetail,
+openOperationSupportNote,
 
   openPrintChooser,
   printSiparis,
