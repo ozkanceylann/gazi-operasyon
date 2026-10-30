@@ -804,7 +804,7 @@ tr.innerHTML = isPendingTab
     <td><span class="order-total-amount">${escapeHtml(OrderSplit.formatAmount(o.toplam_tutar))} <small>TL</small></span>${OrderSplit.button(o)}</td>
     <td class="order-status-cell">${orderStageBadge(o)}</td>
     <td>${noteChip}</td>
-    <td>${orderTakerMarkup(o)}</td>
+    <td><span class="order-taker-support">${orderTakerMarkup(o)}${extraSlot(o,'support')}</span></td>
   `
   : `
     <td>${o.siparis_no}${OrderSplit.related(o)}</td>
@@ -824,11 +824,11 @@ tr.innerHTML = isPendingTab
   ${
     shouldShowNoteColumn(currentTab)
       ? noteChip
-      : `<span class="order-code-support"><span>${escapeHtml(o.kargo_takip_kodu ?? "-")}</span>${extraSlot(o,'support')}</span>`
+      : escapeHtml(o.kargo_takip_kodu ?? "-")
   }
 </td>
 
-<td>${orderTakerMarkup(o)}</td>
+<td><span class="order-taker-support">${orderTakerMarkup(o)}${extraSlot(o,'support')}</span></td>
 <td>${errorPreview}${currentTab === "kargolandi" && ["sent","uncertain","historical"].includes(o.sube_etiket_durumu) ? branchLabelButton(o) : ""}${currentTab === "kargolandi" && canLabel ? `<button type="button" class="btn-cargo-label ${hasCargoLabel(o)?"cargo-label-print":"cargo-label-create"}" data-label-operation="${hasCargoLabel(o)?"print":"create"}" onclick="event.stopPropagation(); retryCargoLabel(${Number(o.siparis_no)}, this)">${cargoLabelButtonText(o)}</button>` : ""}</td>
 
   `;

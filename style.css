@@ -2001,7 +2001,7 @@ body.orders-page { --bg:#101d15; --text:#edf0e3; background:#101d15; color:#edf0
 
 .operation-card--receipt{--counter:#8054a4;background:#f3edf8;border-color:#d9c8e8;color:#654080}
 
-/* Sales-team conversation notes share the status row on desktop and mobile. */
+/* Sales-team conversation notes sit beside the order taker. */
 .operation-support-note{display:inline-flex;vertical-align:middle;align-items:center;justify-content:center;width:36px;height:36px;padding:7px;border:1px solid;border-radius:9px;cursor:pointer;flex-shrink:0;box-sizing:border-box}
 .operation-support-note svg{width:20px;height:20px;pointer-events:none}
 .operation-support-note--saved{background:#205d3e;color:#c4f7d8;border-color:#63bb8a}
@@ -2011,6 +2011,6 @@ body.orders-page { --bg:#101d15; --text:#edf0e3; background:#101d15; color:#edf0
 .operation-support-content{white-space:pre-wrap;overflow-wrap:anywhere;max-height:55vh;overflow:auto;line-height:1.6;margin:12px 0}
 .operation-support-dialog{width:min(480px,calc(100vw - 32px));box-sizing:border-box;max-height:90dvh;overflow:auto}
 
-.order-code-support{display:inline-flex;align-items:center;gap:8px;max-width:100%;vertical-align:middle}
-.order-code-support>span{min-width:0;overflow-wrap:anywhere}
+.order-taker-support{display:inline-flex;align-items:center;gap:8px;max-width:100%;vertical-align:middle}
+.order-taker-support>.order-taker-person{min-width:0;overflow-wrap:anywhere;white-space:normal}
 @media(max-width:1200px){.orders-page #ordersBody td .operation-support-note{width:40px;min-width:40px;padding:8px!important;flex-shrink:0}}
