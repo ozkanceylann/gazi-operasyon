@@ -28,6 +28,7 @@ jobs:
       - run: node tests/operation-counters.test.cjs
       - run: node tests/missing-pending.cjs
       - run: node tests/delivery-selection-warning.cjs
+      - run: node tests/support-note-view-browser.cjs
       - run: node tests/cargo-filters-browser.cjs
       - run: node tests/mobile-navigation-browser.cjs
       - run: node tests/theme-browser.cjs

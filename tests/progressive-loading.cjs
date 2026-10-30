@@ -4,7 +4,7 @@ const start=source.indexOf('let extrasToken=');const end=source.indexOf(mobile?'
 let doneHistory,doneNote,doneReceipts;
 const history=new Promise(r=>doneHistory=r),note=new Promise(r=>doneNote=r),receipts=new Promise(r=>doneReceipts=r);
 const rows=[{siparis_no:1}],slots=new Map();
-const context=vm.createContext({console,db:{},CustomerOrderHistory:{load:()=>history,markup:()=>'<details>history</details>'},OrderReceipts:{load:()=>receipts,badge:()=>'receipt'},loadCustomerNoteIcons:()=>note,loadCustomerNotes:()=>note,customerNoteIcon:()=>'note',customerNoteCard:()=>'note',customerNoteDetail:()=>'note detail'});
+const context=vm.createContext({console,db:{},operationSupportButton:()=>'',loadOperationSupportNotes:async()=>{},CustomerOrderHistory:{load:()=>history,markup:()=>'<details>history</details>'},OrderReceipts:{load:()=>receipts,badge:()=>'receipt'},loadCustomerNoteIcons:()=>note,loadCustomerNotes:()=>note,customerNoteIcon:()=>'note',customerNoteCard:()=>'note',customerNoteDetail:()=>'note detail'});
 vm.runInContext(source.slice(start,end),context);context.rows=rows;
 vm.runInContext('markExtras(rows)',context);
 assert.match(vm.runInContext("extraSlot(rows[0],'history')",context),/yükleniyor/);
