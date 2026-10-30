@@ -1,7 +1,7 @@
 // ================================
 // 🔥 VERSION = DEPLOY TARİHİ
 // ================================
-const VERSION = "20261030-support-taker-130";
+const VERSION = "20261031-support-taker-width-131";
 const CACHE_NAME = `siparis-app-${VERSION}`;
 
 // Cache edilecek dosyalar
