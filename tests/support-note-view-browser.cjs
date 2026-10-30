@@ -14,8 +14,8 @@ const {chromium}=require('playwright');
    window.fail=false;window.requests=[];
    const db={rpc:async(name,args)=>{requests.push({name,args});if(window.fail)return {error:{message:'denied'}};return {data:Object.fromEntries(args.p_order_ids.filter(id=>notes[id]).map(id=>[id,notes[id]]))};}};
    ${source.slice(source.indexOf('const operationSupportOrders ='),source.indexOf('let extrasToken=0;'))}
-   window.rows=[{siparis_no:1,ad_soyad:'Örnek <Müşteri>',key:'support'},{siparis_no:2,key:'failed'}];
-   window.mount=()=>{document.getElementById('fixture').innerHTML=rows.map(o=>'<div class="order-taker-support"><span class="order-taker-person">Evrim</span>'+operationSupportButton(o)+'</div>').join('');};
+   window.rows=[{siparis_no:1,ad_soyad:'Örnek <Müşteri>',key:'support',taker:'Özkan'},{siparis_no:2,key:'failed',taker:'Ceylan'}];
+   window.mount=()=>{document.getElementById('fixture').innerHTML='<div class="table-wrapper"><table class="orders-table"><thead><tr>'+['number','count','customer','product','total','status','code','taker','actions'].map(role=>'<th class="order-cell--'+role+'">'+role+'</th>').join('')+'</tr></thead><tbody id="ordersBody">'+rows.map(o=>'<tr><td class="order-cell--number">'+o.siparis_no+'</td><td class="order-cell--count">1</td><td class="order-cell--customer">Örnek Müşteri</td><td class="order-cell--product">10 kg zeytin</td><td class="order-cell--total">1100</td><td class="order-cell--status">Destek</td><td class="order-cell--code">694073465945</td><td class="order-cell--taker" data-label="Sipariş alan"><span class="order-taker-support"><span class="order-taker-person">'+o.taker+'</span>'+operationSupportButton(o)+'</span></td><td class="order-cell--actions"></td></tr>').join('')+'</tbody></table></div>';};
    window.load=()=>loadOperationSupportNotes(rows);
    window.pendingButton=()=>{currentTab='bekleyen';const markup=operationSupportButton({siparis_no:3,key:'unknown'});currentTab='sorunlu';return markup;};
    mount();
@@ -25,8 +25,12 @@ const {chromium}=require('playwright');
   assert.equal(await page.locator('.operation-support-note--saved').count(),1);
   assert.equal(await page.locator('.operation-support-note--missing').count(),1);
   assert.equal(await page.evaluate(()=>pendingButton()),'');
-  for(const width of [320,390,1440]){
+  for(const width of [320,390,1280,1440]){
    await page.setViewportSize({width,height:800});
+   const names=await page.locator('.order-taker-person').evaluateAll(els=>els.map(el=>({height:el.getBoundingClientRect().height,line:parseFloat(getComputedStyle(el).lineHeight),padding:parseFloat(getComputedStyle(el).paddingTop)+parseFloat(getComputedStyle(el).paddingBottom),wrap:getComputedStyle(el).whiteSpace,width:el.clientWidth,textWidth:el.scrollWidth})));
+   assert(names.every(n=>n.wrap==='nowrap'),'Seller names must stay on one line at '+width);
+   if(width>1200)assert(names.every(n=>n.textWidth<=n.width),'Özkan/Ceylan must fit beside the icon in the actual fixed table at '+width);
+   assert.equal(await page.locator('.order-cell--taker .operation-support-note').count(),2,'Icons stay inside seller cells');
    await page.locator('.operation-support-note--saved').click();
    const dialog=page.getByRole('dialog');await dialog.getByText('Yarın teslim istiyor.',{exact:false}).waitFor();
    assert.equal(await dialog.locator('textarea,input,img').count(),0,'Explanation remains read-only escaped text');
