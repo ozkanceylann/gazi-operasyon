@@ -4,7 +4,7 @@ const {chromium}=require('playwright');
  const browser=await chromium.launch();
  try{
   const page=await browser.newPage();
-  const source=fs.readFileSync('app.js','utf8');assert(source.includes('order-code-support'), 'Icon is beside tracking code');
+  const source=fs.readFileSync('app.js','utf8');assert(source.includes('order-taker-support'), 'Icon is inside the order-taker block');
   await page.setContent('<meta name="viewport" content="width=device-width,initial-scale=1"><style>'+fs.readFileSync('style.css','utf8')+fs.readFileSync('theme.css','utf8')+'</style><body class="orders-page"><div id="fixture"></div><div id="alertRoot"></div></body>');
   await page.addScriptTag({content:`
    let currentTab='sorunlu';
@@ -15,7 +15,7 @@ const {chromium}=require('playwright');
    const db={rpc:async(name,args)=>{requests.push({name,args});if(window.fail)return {error:{message:'denied'}};return {data:Object.fromEntries(args.p_order_ids.filter(id=>notes[id]).map(id=>[id,notes[id]]))};}};
    ${source.slice(source.indexOf('const operationSupportOrders ='),source.indexOf('let extrasToken=0;'))}
    window.rows=[{siparis_no:1,ad_soyad:'Örnek <Müşteri>',key:'support'},{siparis_no:2,key:'failed'}];
-   window.mount=()=>{document.getElementById('fixture').innerHTML=rows.map(o=>'<div class="order-code-support"><span>694073465945</span>'+operationSupportButton(o)+'</div>').join('');};
+   window.mount=()=>{document.getElementById('fixture').innerHTML=rows.map(o=>'<div class="order-taker-support"><span class="order-taker-person">Evrim</span>'+operationSupportButton(o)+'</div>').join('');};
    window.load=()=>loadOperationSupportNotes(rows);
    window.pendingButton=()=>{currentTab='bekleyen';const markup=operationSupportButton({siparis_no:3,key:'unknown'});currentTab='sorunlu';return markup;};
    mount();
