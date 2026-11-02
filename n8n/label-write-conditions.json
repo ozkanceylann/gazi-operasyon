@@ -1,0 +1,58 @@
+[
+  {
+    "name": "Barkod Etiket · Paket Barkodlarını Kaydet",
+    "parameters": {
+      "operation": "update",
+      "tableId": "gazi_siparisler",
+      "filters": {
+        "conditions": [
+          {
+            "keyName": "siparis_no",
+            "condition": "eq",
+            "keyValue": "={{ $json.siparis_no }}"
+          },
+          {
+            "keyName": "kargo_siparis_no",
+            "condition": "eq",
+            "keyValue": "={{ $('Barkod Etiket · Etiket Siparişini Oku').first().json.kargo_siparis_no }}"
+          },
+          {
+            "keyName": "orderinvoiceid",
+            "condition": "eq",
+            "keyValue": "={{ $('Barkod Etiket · Etiket Siparişini Oku').first().json.orderinvoiceid }}"
+          }
+        ]
+      },
+      "dataToSend": "autoMapInputData",
+      "inputsToIgnore": "siparis_no"
+    }
+  },
+  {
+    "name": "Kargola Etiket · Paket Barkodlarını Kaydet",
+    "parameters": {
+      "operation": "update",
+      "tableId": "gazi_siparisler",
+      "filters": {
+        "conditions": [
+          {
+            "keyName": "siparis_no",
+            "condition": "eq",
+            "keyValue": "={{ $json.siparis_no }}"
+          },
+          {
+            "keyName": "kargo_siparis_no",
+            "condition": "eq",
+            "keyValue": "={{ $('Kargola Etiket · Etiket Siparişini Oku').first().json.kargo_siparis_no }}"
+          },
+          {
+            "keyName": "orderinvoiceid",
+            "condition": "eq",
+            "keyValue": "={{ $('Kargola Etiket · Etiket Siparişini Oku').first().json.orderinvoiceid }}"
+          }
+        ]
+      },
+      "dataToSend": "autoMapInputData",
+      "inputsToIgnore": "siparis_no"
+    }
+  }
+]

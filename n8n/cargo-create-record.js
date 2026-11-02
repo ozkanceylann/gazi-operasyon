@@ -1,0 +1,7 @@
+const r=$input.first().json,b=r.body,a=Array.isArray(b)?b[0]:b||{},s=$('Kargola · Siparişi Kontrol Et').first().json,status=Number(r.statusCode||502),ok=status>=200&&status<300&&!!a.orderInvoiceId&&!!a.orderInvoiceDetailId;
+const message=ok?'Sipariş kargolandı. Etiketi Kargolandı sekmesinden ayrıca oluşturabilirsiniz.':String(a.error?.description||a.error?.Message||a.error?.message||a.message||a.title||JSON.stringify(b)||'DHL yanıtı alınamadı');
+let previous={};try{previous=JSON.parse(s.kargo_api_yanit||'{}')}catch{}const payment=$('Kargola · DHL İsteğini Hazırla').first().json.order;
+const response={codPayment:{isCOD:payment.isCOD,codAmount:payment.codAmount},activeShipmentCancelled:false,success:ok,environment:'production',stage:ok?'order_created':'failed',siparis_no:s.siparis_no,message,result:b};
+const out={siparis_no:s.siparis_no,statusCode:ok?200:(status>=400?status:502),response,kargo_api_yanit:JSON.stringify({...(previous.cancellation?{cancellation:previous.cancellation}:{}),...response}),gonder_hata_bilgisi:ok?null:JSON.stringify(response)};
+if(ok)Object.assign(out,{kargo_durumu:'Kargolandı',kargo_siparis_no:String($('Kargola · DHL İsteğini Hazırla').first().json.order.referenceId),orderinvoiceid:String(a.orderInvoiceId),orderinvoicedetailid:String(a.orderInvoiceDetailId),shipperbranchcode:String(a.shipperBranchCode||''),shipmentStatus:'DHL sipariş kaydı oluşturuldu; barkod bekleniyor'});
+return [{json:out}];
