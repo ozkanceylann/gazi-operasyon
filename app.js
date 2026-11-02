@@ -2241,6 +2241,7 @@ async function sendToCargo(orderId,{prepareFirst=false}={}){
   let preparedHere=false;
   if(prepareFirst)preparingOrders.add(siparisNo);
   try{
+    await ShippingApproval.assert(db,siparisNo);
     if(prepareFirst){
       const {data:order,error:readError}=await db.from(TABLE).select("*").eq("siparis_no",siparisNo).single();
       if(readError)throw readError;

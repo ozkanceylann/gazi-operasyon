@@ -1,7 +1,7 @@
 // ================================
 // 🔥 VERSION = DEPLOY TARİHİ
 // ================================
-const VERSION = "20261031-support-taker-width-131";
+const VERSION = "20261102-shipping-approval-132";
 const CACHE_NAME = `siparis-app-${VERSION}`;
 
 // Cache edilecek dosyalar
@@ -21,6 +21,8 @@ const ASSETS = [
   "/order-split.css",
   "/customer-order-history.js",
   "/order-receipts.js",
+  "/shipping-approval.js",
+  "/shipping-approval.css",
   "/order-receipts.css",
   "/mobile-navigation.js",
   "/config.js",

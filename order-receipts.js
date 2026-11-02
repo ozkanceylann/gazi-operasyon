@@ -2,9 +2,10 @@
 const OrderReceipts=(()=>{
  const OPERATIONS=true;
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const required=o=>o.dekont_gecmis_onayli!==true&&/\b(eft|iban|havale|fast)\b/i.test(String(o.odeme_sekli||'')+' '+String(o.notlar||''));
+ const required=o=>o.shippingControl?.eft??/\b(eft|iban|havale|fast)\b/i.test(String(o.odeme_sekli||''));
  const states={pending:'🟡 Kontrol bekliyor',approved:'✅ Onaylandı',rejected:'🔴 Kontrol gerekli'};
  async function load(db,orders){
+ await ShippingApproval.load(db,orders);
  for(const o of orders)o.receipts=undefined;
  const ids=orders.map(o=>Number(o.siparis_no)).filter(Number.isSafeInteger);if(!ids.length)return;
  try{
@@ -12,17 +13,19 @@ const OrderReceipts=(()=>{
  for(const o of orders)o.receipts=all.filter(r=>r.order_id===Number(o.siparis_no));
  }catch{for(const o of orders)o.receiptError=true;}
  }
- function badge(o){
- if(o.dekont_gecmis_onayli===true)return '<span class="receipt-badge" title="15 Ekim 2026 öncesi EFT / ücretsiz sipariş: eski dönem dekont onayı">✅ Onaylandı · Eski dönem</span>';
+ function receiptBadge(o){
+ if(o.dekont_gecmis_onayli===true&&!required(o)&&!o.shippingControl?.approval_required)return '<span class="receipt-badge" title="15 Ekim 2026 öncesi EFT / ücretsiz sipariş: eski dönem dekont onayı">✅ Onaylandı · Eski dönem</span>';
  if(!required(o)&&!o.receipts?.length)return '';
  if(!Array.isArray(o.receipts))return '<span class="receipt-badge">Dekont durumu alınamadı</span>';
  const state=!o.receipts.length?'⚠️ Dekont eksik':o.receipts.some(r=>r.status==='rejected')?states.rejected:o.receipts.some(r=>r.status==='pending')?states.pending:states.approved;
  return `<span class="receipt-badge" title="${esc(state)}">${esc(state)}</span>`;
  }
- function markup(o){return `<section class="receipt-panel" data-receipt-panel="${Number(o.siparis_no)}"><h3>Ödeme belgeleri</h3><p>${badge(o)}</p><div data-receipt-list role="status">Belgeler yükleniyor…</div>${required(o)&&!OPERATIONS?'<label class="receipt-upload">Belge yükle<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-receipt-upload></label><p class="receipt-hint">PDF, JPG, PNG veya WEBP · En fazla 10 MB. Belge eklemek ödemeyi otomatik onaylamaz.</p>':''}<p data-receipt-message role="status"></p></section>`;}
+ function badge(o){return ShippingApproval.badge(o)+receiptBadge(o);}
+ function markup(o){return ShippingApproval.markup(o)+`<section class="receipt-panel" data-receipt-panel="${Number(o.siparis_no)}"><h3>Ödeme belgeleri</h3><p>${badge(o)}</p><div data-receipt-list role="status">Belgeler yükleniyor…</div>${required(o)&&!OPERATIONS?'<label class="receipt-upload">Belge yükle<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-receipt-upload></label><p class="receipt-hint">PDF, JPG, PNG veya WEBP · En fazla 10 MB. Belge eklemek ödemeyi otomatik onaylamaz.</p>':''}<p data-receipt-message role="status"></p></section>`;}
  async function invoke(db,body){const {data,error}=await db.functions.invoke('order-receipts',{body});if(error){let message=error.message;try{message=(await error.context.json()).error||message;}catch{}throw Error(message);}if(data?.error)throw Error(data.error);return data;}
  async function open(db,r){const {data,error}=await db.storage.from('order-receipts').createSignedUrl(r.object_path,120);if(error)throw error;const u=new URL(data.signedUrl);if(u.protocol!=='https:')throw Error('Belge bağlantısı geçersiz');const a=document.createElement('a');a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';a.click();}
  async function mount(db,o,root,onChange=()=>{}){
+ await ShippingApproval.mount(db,o,root,onChange);
  const panel=root.querySelector(`[data-receipt-panel="${Number(o.siparis_no)}"]`);if(!panel)return;
  const message=panel.querySelector('[data-receipt-message]');
  const {data:auth}=await db.auth.getUser();const isAdmin=OPERATIONS&&auth?.user?.app_metadata?.firma==='gazi'&&auth.user.app_metadata?.role!=='seller';
@@ -30,7 +33,7 @@ const OrderReceipts=(()=>{
  const {data,error}=await db.from('order_receipts').select('*').eq('order_id',Number(o.siparis_no)).order('created_at',{ascending:false});
  if(!panel.isConnected)return;
  if(error){panel.querySelector('[data-receipt-list]').textContent='Belgeler alınamadı. Siparişi yeniden açın.';return;}
- o.receipts=data;panel.querySelector('p').innerHTML=badge(o);
+ o.receipts=data;await ShippingApproval.mount(db,o,root,onChange);panel.querySelector('p').innerHTML=badge(o);
  const list=panel.querySelector('[data-receipt-list]');list.innerHTML=data.map(r=>`<article class="receipt-item"><strong>${esc(r.file_name)}</strong><small>${esc(new Date(r.created_at).toLocaleString('tr-TR'))} · ${r.source==='whatsapp'?'WhatsApp':'Panel'} · ${esc(states[r.status])}</small><div><button type="button" data-receipt-open="${r.id}">Dekontu aç</button>${isAdmin?`<button type="button" data-receipt-review="${r.id}" data-status="approved">Onayla</button><button type="button" data-receipt-review="${r.id}" data-status="rejected">Kontrol gerekli</button>`:''}</div></article>`).join('')||'<p>Henüz dekont eklenmemiş.</p>';
  list.onclick=async e=>{const b=e.target.closest('button');if(!b)return;e.stopPropagation();b.disabled=true;message.textContent='';try{const r=data.find(r=>r.id===(b.dataset.receiptOpen||b.dataset.receiptReview));if(b.dataset.receiptOpen)await open(db,r);else{await invoke(db,{action:'review',receipt_id:r.id,status:b.dataset.status});await refresh();await onChange();}}catch(err){message.textContent=err.message;}finally{b.disabled=false;}};
  }

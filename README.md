@@ -45,3 +45,11 @@ Doğrulama: `node tests/order-split.test.cjs`, `node tests/order-split-db.cjs` (
 `GAZI KARGO WHATSAPP — CANLI` akışında zamanlayıcı bulunmaz. `gazi_notify.capture()` yalnız yeni gönderi/aşama için tekil bildirim kaydı oluşturur. `gazi_wp_dispatch_on_change` tetikleyicisi, işlem tamamlandıktan sonra `gazi-kargo-bildirim` webhook'una sadece o kaydın kimliğini iletir. İşçi `gazi_wp_claim(uuid)` ile yalnız bu kaydı kilitler. Değişmeyen hareket ve gönderilmiş aşama yeni mesaj üretmez. Test kayıtları canlı webhook'u tetiklemez. Evolution'ın `/otomasyon` olayları 200 ile karşılanır ve bildirim akışını başlatmaz. Bağlantı/işleme sorunu olan kayıtlar saklanır; dakikalık kontrol veya otomatik yeniden deneme yoktur.
 
 Kaynaklar: `supabase/gazi_event_notifications.sql`, `n8n/gazi-cargo-event-notifications.json`. Geri alınan gerçek güncelleme testi: `tests/event-notifications.sql`.
+
+## Kargolama onayı
+
+Mobil kaynaklı ve ücretsiz siparişler Gazi Operasyon detay ekranından onaylanır. Onay, incelenen müşteri/adres/ürün/paket/ödeme bilgilerine bağlıdır; bu bilgiler değişirse yeniden onay gerekir. EFT siparişlerinde siparişe bağlı onaylı dekont gerekir; operasyon onayı tek başına dekont yerine geçmez. Bölünmüş mobil siparişlerin her parçası onaylanır; EFT belgesi ana siparişten de okunabilir.
+
+`supabase/sql/gazi-shipping-approval.sql` veritabanı kontrolünü kurar. n8n Kargola akışı `gazi_shipping_authorize` RPC'sini DHL çağrısından önce çalıştırır. Tablo tetikleyicisi doğrudan yeni gönderi yazımını da kontrol eder. Satıcılar onay veremez. Mevcut kargoların takip ve etiket işlemleri etkilenmez.
+
+Kontroller: `node tests/direct-cargo.test.cjs`, `tests/shipping-approval.sql` (ROLLBACK).
