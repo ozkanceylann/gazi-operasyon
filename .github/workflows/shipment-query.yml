@@ -1,9 +1,9 @@
 name: Shipment query checks
 on:
   push:
-    paths: ['gonderi-sorgulama.*', 'n8n/manual-cargo-*', 'tests/manual-cargo.test.cjs', 'tests/shipment-query-browser.cjs', '.github/workflows/shipment-query.yml']
+    paths: ['gonderi-sorgulama.*', 'n8n/manual-cargo-*', 'n8n/cancellation-*.js', 'n8n/*label*.js', 'n8n/label-write-conditions.json', 'n8n/cargo-create-record.js', 'tests/label-generation.test.cjs', 'tests/manual-cargo.test.cjs', 'tests/shipment-query-browser.cjs', '.github/workflows/shipment-query.yml']
   pull_request:
-    paths: ['gonderi-sorgulama.*', 'n8n/manual-cargo-*', 'tests/manual-cargo.test.cjs', 'tests/shipment-query-browser.cjs', '.github/workflows/shipment-query.yml']
+    paths: ['gonderi-sorgulama.*', 'n8n/manual-cargo-*', 'n8n/cancellation-*.js', 'n8n/*label*.js', 'n8n/label-write-conditions.json', 'n8n/cargo-create-record.js', 'tests/label-generation.test.cjs', 'tests/manual-cargo.test.cjs', 'tests/shipment-query-browser.cjs', '.github/workflows/shipment-query.yml']
 permissions:
   contents: read
 jobs:
@@ -17,6 +17,9 @@ jobs:
           node-version: 22
       - run: npm install --no-save --package-lock=false playwright@1.62.1
       - run: npx playwright install --with-deps chromium
+      - run: node tests/label-generation.test.cjs
+      - run: node tests/label-cancellation.test.cjs
+      - run: node tests/cargo-label-create-flow.test.cjs
       - run: node tests/manual-cargo.test.cjs
       - run: node tests/shipment-query-browser.cjs
       - uses: actions/upload-artifact@v4
