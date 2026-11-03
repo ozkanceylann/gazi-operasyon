@@ -982,8 +982,19 @@ function renderReturnMovements(order){
 function renderReturnDetail(order){
   const url=returnLabelUrl(order.iade_etiket_url);
   if(!url)return "";
-  return `<div class="detail-group return-detail"><div class="detail-title">İade Fişi</div><p>İade kodu: <strong>${escapeHtml(order.iade_kodu)}</strong></p><p>${escapeHtml(returnStage(order))} · ${escapeHtml(formatDateTimeTR(order.iade_tarihi))}</p><a class="btn-return-label" href="${escapeHtml(returnSlipUrl(order.iade_kodu,url))}" target="_blank" rel="noopener noreferrer">İade Fişini Aç</a></div>`;
+  return `<div class="detail-group return-detail"><div class="detail-title">İade Fişi</div><p>İade kodu: <strong>${escapeHtml(order.iade_kodu)}</strong></p><p>${escapeHtml(returnStage(order))} · ${escapeHtml(formatDateTimeTR(order.iade_tarihi))}</p><div class="return-action-buttons return-detail-buttons"><a class="btn-return-label" href="${escapeHtml(returnSlipUrl(order.iade_kodu,url))}" target="_blank" rel="noopener noreferrer">İade Fişini Aç</a>${returnCancelButton(order)}<button type="button" class="btn-return-label" data-return-url="${escapeHtml(url)}" onclick="copyReturnDetailLink(this)">Fiş Linkini Kopyala</button></div></div>`;
 }
+window.copyReturnDetailLink=async function(button){
+  const url=returnLabelUrl(button.dataset.returnUrl);
+  if(!url)return;
+  try{
+    await navigator.clipboard.writeText(url);
+    toast("İade fişi bağlantısı kopyalandı.");
+  }catch{
+    toast("İade fişi bağlantısı kopyalanamadı.");
+  }
+};
+
 function showReturnLabel(result){
   const url=returnLabelUrl(result.url);if(!url)throw new Error("İade fişi bağlantısı doğrulanamadı.");
   const root=document.getElementById("alertRoot"),wrap=document.createElement("div");
@@ -992,7 +1003,7 @@ function showReturnLabel(result){
   root.appendChild(wrap);
   wrap.querySelector("[data-close-return]").onclick=()=>wrap.remove();
   wrap.querySelector("[data-copy-return]").onclick=async()=>{
-    try{await navigator.clipboard.writeText(returnSlipUrl(result.reference,url));wrap.querySelector("[data-copy-status]").textContent="İade fişi bağlantısı kopyalandı.";}
+    try{await navigator.clipboard.writeText(url);wrap.querySelector("[data-copy-status]").textContent="İade fişi bağlantısı kopyalandı.";}
     catch{wrap.querySelector("[data-copy-status]").textContent="Bağlantıyı İade Fişini Aç düğmesinden açıp kopyalayabilirsiniz.";}
   };
   wrap.querySelector("a").focus();
@@ -1414,14 +1425,14 @@ window.cancelReturnLabel=async function(id,button){
 };
 
 function renderCargoTracking(order){
-  if(!order.kargo_takip_kodu&&!order.orderinvoiceid)return `<details class="detail-group detail-movement-history"><summary>Kargo hareketleri <span class="disclosure-action"></span></summary><div class="detail-cargo-actions">${returnCreateButton(order)}${returnTrackingButton(order)}${returnCancelButton(order)}</div><p class="cargo-empty">Henüz kayıtlı kargo hareketi yok.</p></details>`;
+  if(!order.kargo_takip_kodu&&!order.orderinvoiceid)return `<details class="detail-group detail-movement-history"><summary>Kargo hareketleri <span class="disclosure-action"></span></summary><div class="detail-cargo-actions">${returnCreateButton(order)}${returnTrackingButton(order)}</div><p class="cargo-empty">Henüz kayıtlı kargo hareketi yok.</p></details>`;
   const tracking=cargoTrackingData(order);
   const movements=sortCargoMovements(tracking?.movements);
   const timeline=movements.map(m=>`<li><strong>${escapeHtml(m.eventStatus||"Kargo hareketi")}</strong><span>${escapeHtml(m.eventDateTime||m.eventDateTime2||"")} · ${cargoBranchContact(m)}</span>${m.description?`<span>${escapeHtml(m.description)}</span>`:""}${cargoMovementIdentity(m)}</li>`).join("");
   const url=order.kargo_takip_url;
   let link="";try{if(new URL(url).protocol==="https:")link=`<a class="btn-open" target="_blank" rel="noopener noreferrer" href="${escapeHtml(url)}">Kargo Takip Sayfası</a>`;}catch{}
   const detailButton=isLiveShipment(order)?`<button class="btn-open" type="button" data-cargo-detail-refresh onclick="refreshSelectedCargoMovements(${Number(order.siparis_no)})">Hareket geçmişini getir</button>`:"";
-  return `<details class="detail-group cargo-detail detail-movement-history"><summary>Kargo hareketleri <span class="disclosure-count">${movements.length} kayıt</span><span class="disclosure-action"></span></summary><div class="detail-cargo-heading"><div class="detail-title">Kargo ve teslimat</div><span class="detail-tracking-number">${escapeHtml(order.kargo_takip_kodu||"Takip no bekleniyor")}</span></div>${cargoStatusBadge(order,{compact:true})}<div class="detail-cargo-actions">${link}${detailButton}${returnCreateButton(order)}${returnTrackingButton(order)}${returnCancelButton(order)}${isGaziAdmin&&canCancelShipment(order)?`<button type="button" class="btn-danger" data-cancel-shipment onclick="cancelShipmentToWaiting(${Number(order.siparis_no)},this)">Gönderiyi İptal Et</button>`:""}</div><div class="detail-cargo-events">${renderCargoPieces(order)}${timeline?`<ol class="cargo-timeline">${timeline}</ol>`:"<p class='cargo-empty'>Henüz kayıtlı kargo hareketi yok.</p>"}${tracking?.movementError?`<p class="cargo-warning">${escapeHtml(tracking.movementError)}</p>`:""}</div></details>`;
+  return `<details class="detail-group cargo-detail detail-movement-history"><summary>Kargo hareketleri <span class="disclosure-count">${movements.length} kayıt</span><span class="disclosure-action"></span></summary><div class="detail-cargo-heading"><div class="detail-title">Kargo ve teslimat</div><span class="detail-tracking-number">${escapeHtml(order.kargo_takip_kodu||"Takip no bekleniyor")}</span></div>${cargoStatusBadge(order,{compact:true})}<div class="detail-cargo-actions">${link}${detailButton}${returnCreateButton(order)}${returnTrackingButton(order)}${isGaziAdmin&&canCancelShipment(order)?`<button type="button" class="btn-danger" data-cancel-shipment onclick="cancelShipmentToWaiting(${Number(order.siparis_no)},this)">Gönderiyi İptal Et</button>`:""}</div><div class="detail-cargo-events">${renderCargoPieces(order)}${timeline?`<ol class="cargo-timeline">${timeline}</ol>`:"<p class='cargo-empty'>Henüz kayıtlı kargo hareketi yok.</p>"}${tracking?.movementError?`<p class="cargo-warning">${escapeHtml(tracking.movementError)}</p>`:""}</div></details>`;
 }
 
 
