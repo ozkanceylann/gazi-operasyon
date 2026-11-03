@@ -2226,11 +2226,20 @@ async function directShipFromList(siparisNo, button){
   if(button.disabled||preparingOrders.has(id)||busy.kargola.has(id))return;
   const label=button.textContent;
   button.disabled=true;button.textContent="Kontrol ediliyor…";
-  try{await sendToCargo(id,{prepareFirst:true});}
-  finally{button.disabled=false;button.textContent=label;}
+  let shipped=false;
+  try{shipped=await sendToCargo(id,{prepareFirst:true,keepList:true})===true;}
+  finally{
+    button.disabled=shipped;
+    button.textContent=shipped?"Kargolandı":label;
+    if(shipped){
+      button.style.cursor="default";
+      const prepareButton=button.parentElement?.querySelector(".btn-prepare");
+      if(prepareButton)prepareButton.disabled=true;
+    }
+  }
 }
 
-async function sendToCargo(orderId,{prepareFirst=false}={}){
+async function sendToCargo(orderId,{prepareFirst=false,keepList=false}={}){
   const siparisNo=Number(orderId ?? selectedOrder?.siparis_no);
   if(!siparisNo)return toast("Önce sipariş seçin.");
   if(busy.kargola.has(siparisNo))return toast("Kargolama sürüyor.");
@@ -2264,8 +2273,15 @@ async function sendToCargo(orderId,{prepareFirst=false}={}){
     const result=await cargoRequest(WH_KARGOLA,{operation:"kargola",siparis_no:String(siparisNo)});
     if(!result.already_created)db.functions.invoke("whatsapp-reaction",{body:{siparis_no:siparisNo,emoji:"🚚"}}).then(({error})=>{if(error)toast("Kargolandı; WhatsApp emojisi gönderilemedi.",6000);}).catch(()=>toast("WhatsApp emojisi gönderilemedi.",6000));
     toast(result.message||"Sipariş kargolandı. Etiketi ayrıca oluşturabilirsiniz.",6000);
-    closeModal();setTab("kargolandi","",true);
-  }catch(error){toast((preparedHere?"Sipariş hazırlandı; kargolama tamamlanamadı: ":"")+error.message,10000);await loadOrders(true);}
+    if(keepList)void refreshOperationCounts();
+    else{closeModal();setTab("kargolandi","",true);}
+    return true;
+  }catch(error){
+    toast((preparedHere?"Sipariş hazırlandı; kargolama tamamlanamadı: ":"")+error.message,10000);
+    if(!keepList)await loadOrders(true);
+    else if(preparedHere)void refreshOperationCounts();
+    return false;
+  }
   finally{busy.kargola.delete(siparisNo);if(prepareFirst)preparingOrders.delete(siparisNo);}
 }
 
