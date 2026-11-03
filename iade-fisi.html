@@ -2,13 +2,13 @@
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DHL İade Fişi</title><meta name="referrer" content="no-referrer">
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;background:#fff;font-family:Arial,sans-serif}
-.label{width:100%;min-height:100vh;min-height:100svh;display:flex;align-items:center;justify-content:center;break-inside:avoid}
-.label img{display:block;width:auto;height:auto;max-width:100%;max-height:100vh;max-height:100svh;object-fit:contain}
+html,body{margin:0;padding:0;background:#fff;font-family:Arial,sans-serif}
+.label{width:100%;margin:0;display:flex;justify-content:center;break-inside:avoid}
+.label img{display:block;width:100%;height:auto;max-width:min(100%,calc(100vh * var(--label-ratio,1)),700px);max-width:min(100%,calc(100svh * var(--label-ratio,1)),700px);object-fit:contain}
 #status{padding:20px;text-align:center}
 #original{display:block;text-align:center;padding:12px}
 [hidden]{display:none!important}
-@media print{@page{margin:0}.label{display:block;min-height:0;width:100mm;max-width:100%;margin:0 auto}.label img{width:100%;max-height:none}#status,#original{display:none!important}body:not(.ready) .label{display:none}}
+@media print{@page{margin:0}.label{display:block;min-height:0;width:100mm;max-width:100%;margin:0 auto}.label img{width:100%;max-width:100%;max-height:none}#status,#original{display:none!important}body:not(.ready) .label{display:none}}
 </style></head>
 <body><p id="status" role="status">DHL iade barkodu yükleniyor…</p><main class="label" id="label" hidden><img id="barcode" alt="DHL iade barkodu"></main><a id="original" hidden rel="noopener noreferrer">DHL fişini yeniden aç</a>
 <script>
@@ -23,6 +23,7 @@ html,body{margin:0;min-height:100%;background:#fff;font-family:Arial,sans-serif}
   if(data.reference!==ref||!/^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/=]+$/.test(data.image||""))throw Error("DHL iade barkodu doğrulanamadı.");
   const image=document.getElementById("barcode");image.src=data.image;
   await image.decode();
+  image.style.setProperty('--label-ratio',String(image.naturalWidth/image.naturalHeight));
   document.getElementById("label").hidden=false;status.hidden=true;document.body.classList.add("ready");
  }catch(e){status.textContent="DHL fişi yüklenemedi. Aşağıdaki bağlantıdan açabilirsiniz.";if(url&&url.protocol==="https:"&&url.hostname==="mn.tc"&&!url.username&&!url.password&&!url.port&&url.pathname==="/"&&/^[A-Za-z0-9]{8,80}$/.test(url.searchParams.get("rtnid")||"")){const a=document.getElementById("original");a.href=url.href;a.hidden=false;}}
 })();
