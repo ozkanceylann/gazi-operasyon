@@ -2282,10 +2282,6 @@ async function sendToCargo(orderId,{prepareFirst=false,keepList=false}={}){
         if(error)throw error;
         if(!updated?.length)throw new Error("Siparişin aşaması değişmiş. Listeyi yenileyin.");
         preparedHere=true;
-        try{
-          const {error:reactionError}=await db.functions.invoke("whatsapp-reaction",{body:{siparis_no:siparisNo,emoji:"📦"}});
-          if(reactionError)toast("Hazırlandı; WhatsApp emojisi gönderilemedi.",6000);
-        }catch{toast("Hazırlandı; WhatsApp emojisi gönderilemedi.",6000);}
       }
     }
     const result=await cargoRequest(WH_KARGOLA,{operation:"kargola",siparis_no:String(siparisNo)});
