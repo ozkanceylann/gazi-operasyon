@@ -2873,7 +2873,16 @@ document.addEventListener("click", event => {
   frame.title = "DHL iade fişi";
   frame.src = link.href;
   frame.style.cssText = "display:block;width:100%;height:min(85vw,60vh,400px);border:0";
-  dialog.append(close, frame);
+  const toolbar = document.createElement("div");
+  toolbar.style.cssText = "display:flex;align-items:center;gap:8px";
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.className = "btn-return-label";
+  copy.textContent = "DHL Linkini Kopyala";
+  copy.dataset.returnUrl = returnLabelUrl(new URL(link.href).searchParams.get("url"));
+  copy.onclick = () => window.copyReturnDetailLink(copy);
+  toolbar.append(copy, close);
+  dialog.append(toolbar, frame);
   dialog.addEventListener("close", () => { dialog.remove(); link.focus(); }, { once:true });
   document.body.append(dialog);
   dialog.showModal();
