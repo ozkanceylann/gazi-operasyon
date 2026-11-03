@@ -963,7 +963,7 @@ function returnImageUrl(reference,value){
 }
 function returnOrderActions(order){
   const url=returnLabelUrl(order.iade_etiket_url);
-  if(url)return `<div class="return-actions"><div class="return-action-buttons"><a class="btn-return-label" href="${escapeHtml(returnImageUrl(order.iade_kodu,url))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">İade Fişini Aç</a></div><span class="return-code">${escapeHtml(order.iade_kodu)}</span></div>`;
+  if(url)return `<div class="return-actions"><div class="return-action-buttons"><a class="btn-return-label" href="${escapeHtml(returnImageUrl(order.iade_kodu,url))}" data-return-image-preview target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">İade Fişini Aç</a></div><span class="return-code">${escapeHtml(order.iade_kodu)}</span></div>`;
   if(currentTab==="tamamlandi" && (order.isDelivered===true||Number(order.shipmentStatusCode)===5))
     return `<button class="btn-return-label btn-return-label-create" type="button" onclick="event.stopPropagation(); createReturnLabel(${Number(order.siparis_no)}, this)">İADE Etiketi Oluştur</button>`;
   return `<span class="cargo-checked">Geri dönüş kargosu</span>`;
@@ -981,7 +981,7 @@ function renderReturnMovements(order){
 function renderReturnDetail(order){
   const url=returnLabelUrl(order.iade_etiket_url);
   if(!url)return "";
-  return `<div class="detail-group return-detail"><div class="detail-title">İade Fişi</div><p>İade kodu: <strong>${escapeHtml(order.iade_kodu)}</strong></p><p>${escapeHtml(returnStage(order))} · ${escapeHtml(formatDateTimeTR(order.iade_tarihi))}</p><div class="return-action-buttons return-detail-buttons"><a class="btn-return-label" href="${escapeHtml(returnImageUrl(order.iade_kodu,url))}" target="_blank" rel="noopener noreferrer">İade Fişini Aç</a>${returnCancelButton(order)}<button type="button" class="btn-return-label" data-return-url="${escapeHtml(url)}" onclick="copyReturnDetailLink(this)">Fiş Linkini Kopyala</button></div></div>`;
+  return `<div class="detail-group return-detail"><div class="detail-title">İade Fişi</div><p>İade kodu: <strong>${escapeHtml(order.iade_kodu)}</strong></p><p>${escapeHtml(returnStage(order))} · ${escapeHtml(formatDateTimeTR(order.iade_tarihi))}</p><div class="return-action-buttons return-detail-buttons"><a class="btn-return-label" href="${escapeHtml(returnImageUrl(order.iade_kodu,url))}" data-return-image-preview target="_blank" rel="noopener noreferrer">İade Fişini Aç</a>${returnCancelButton(order)}<button type="button" class="btn-return-label" data-return-url="${escapeHtml(url)}" onclick="copyReturnDetailLink(this)">Fiş Linkini Kopyala</button></div></div>`;
 }
 window.copyReturnDetailLink=async function(button){
   const url=returnLabelUrl(button.dataset.returnUrl);
@@ -998,7 +998,7 @@ function showReturnLabel(result){
   const url=returnLabelUrl(result.url);if(!url)throw new Error("İade fişi bağlantısı doğrulanamadı.");
   const root=document.getElementById("alertRoot"),wrap=document.createElement("div");
   wrap.className="alert-backdrop";
-  wrap.innerHTML=`<div class="alert-card return-result" role="dialog" aria-modal="true" aria-label="İade etiketi"><div class="alert-title">İade Etiketi Hazır</div><p>İade kodu: <strong>${escapeHtml(result.reference)}</strong></p><p>Müşteri bu kodla DHL şubesine başvurabilir. Kargo ücreti Gazi hesabına aittir.</p><a class="btn-return-label" href="${escapeHtml(returnImageUrl(result.reference,url))}" target="_blank" rel="noopener noreferrer">İade Fişini Aç</a><div class="alert-actions"><button class="btn-ghost" type="button" data-copy-return>Fiş Linkini Kopyala</button><button class="btn-brand" type="button" data-close-return>Kapat</button></div><p role="status" data-copy-status></p></div>`;
+  wrap.innerHTML=`<div class="alert-card return-result" role="dialog" aria-modal="true" aria-label="İade etiketi"><div class="alert-title">İade Etiketi Hazır</div><p>İade kodu: <strong>${escapeHtml(result.reference)}</strong></p><p>Müşteri bu kodla DHL şubesine başvurabilir. Kargo ücreti Gazi hesabına aittir.</p><a class="btn-return-label" href="${escapeHtml(returnImageUrl(result.reference,url))}" data-return-image-preview target="_blank" rel="noopener noreferrer">İade Fişini Aç</a><div class="alert-actions"><button class="btn-ghost" type="button" data-copy-return>Fiş Linkini Kopyala</button><button class="btn-brand" type="button" data-close-return>Kapat</button></div><p role="status" data-copy-status></p></div>`;
   root.appendChild(wrap);
   wrap.querySelector("[data-close-return]").onclick=()=>wrap.remove();
   wrap.querySelector("[data-copy-return]").onclick=async()=>{
@@ -2855,3 +2855,27 @@ if (["bekleyen","hazirlandi","kargolandi","tamamlandi","iade","sorunlu","iptal"]
 setInterval(()=>{if(!document.hidden)void refreshOperationCounts(false);},60000);
 
 (async()=>{const {data}=await db.auth.getUser();if(data?.user?.app_metadata?.firma!=="gazi"||data.user.app_metadata?.role==="seller")return;const b=document.createElement("button");b.type="button";b.className="btn-mini";b.textContent="Eşleşmeyen dekontlar";b.onclick=()=>OrderReceipts.unmatched(db);const stack=document.createElement("div");stack.className="receipt-warning-stack";const slot=document.createElement("div");slot.id="missingOperationSlot";slot.setAttribute("aria-live","polite");stack.append(b,slot);document.querySelector(".page-header-actions")?.append(stack);renderMissingOperationNotice();})();
+
+document.addEventListener("click", event => {
+  const link = event.target.closest("a[data-return-image-preview]");
+  if (!link || !window.HTMLDialogElement || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  const dialog = document.createElement("dialog");
+  dialog.setAttribute("aria-label", "DHL iade fişi");
+  dialog.style.cssText = "width:min(92vw,425px);max-height:90vh;padding:10px;border:0;border-radius:12px;background:#fff;color:#222;box-shadow:0 8px 40px #0008";
+  const close = document.createElement("button");
+  close.type = "button";
+  close.textContent = "✕";
+  close.setAttribute("aria-label", "Kapat");
+  close.style.cssText = "display:block;margin-left:auto;width:44px;height:44px;border:0;border-radius:8px;background:#eee;color:#222;cursor:pointer";
+  close.onclick = () => dialog.close();
+  const frame = document.createElement("iframe");
+  frame.title = "DHL iade fişi";
+  frame.src = link.href;
+  frame.style.cssText = "display:block;width:100%;height:min(85vw,60vh,400px);border:0";
+  dialog.append(close, frame);
+  dialog.addEventListener("close", () => { dialog.remove(); link.focus(); }, { once:true });
+  document.body.append(dialog);
+  dialog.showModal();
+  close.focus();
+});
