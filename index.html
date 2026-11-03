@@ -155,7 +155,7 @@
 
 <div id="actionButtons" class="modal-btns">
 
-    <button id="btnPrepare" class="btn-primary btn-prepare" onclick="markPrepared()">Hazırla</button>
+    <button id="btnPrepare" class="btn-primary btn-prepare" onclick="directShipFromDetail(this)">Direkt Kargola</button>
     <button id="btnCargo" class="btn-secondary" onclick="sendToCargo()">Kargola</button>
     <button id="btnWaiting" class="btn-waiting" onclick="setWaiting()">Bekliyor</button>
     <button id="btnBarcode" class="btn-primary" style="display:none;" onclick="printBarcode()">Etiket Oluştur / Yazdır</button>
@@ -220,7 +220,7 @@ document.getElementById("orderModal").addEventListener("click", function(e){
   <script type="module">
     try {
       await window.waitConfig();
-      await import("./app.js?v=20261103-return-cancel-inline-138");
+      await import("./app.js?v=20261103-detail-direct-139");
       document.getElementById("brandLogo").src = CONFIG.logo;
       const brandTitle = document.getElementById("brandTitle");
       const brandName = document.createElement("span");

@@ -1714,7 +1714,7 @@ ${renderOriginalMessage(d)}
   const kargo = d.kargo_durumu === "Kargolandı";
   const tamam = currentTab === "tamamlandi" || d.kargo_durumu === "Tamamlandı" || d.isDelivered === true || Number(d.shipmentStatusCode) === 5;
 
-  // Bekleyeni → Hazırla
+  // Bekliyor → Direkt Kargola
   document.getElementById("btnPrepare").style.display =
     d.kargo_durumu === "Bekliyor" ? "inline-block" : "none";
 
@@ -2144,56 +2144,12 @@ async function prepareFromList(siparisNo, button){
 }
 window.prepareFromList=prepareFromList;
 
-async function markPrepared(){
-
-  const siparisNo = selectedOrder?.siparis_no;
-
-  if(!siparisNo){
-    toast("Sipariş numarası bulunamadı.");
-    return;
-  }
-
-  // Siparişi Hazırlandı yap
-  const { error } = await db
-    .from(TABLE)
-    .update({
-      kargo_durumu: "Hazırlandı"
-    })
-    .eq("siparis_no", siparisNo);
-
-  if(error){
-    console.error("Hazırlama hatası:", error);
-    toast("Sipariş hazırlanamadı.");
-    return;
-  }
-
-  // WhatsApp mesajına 📦 reaksiyonu gönder
-  try {
-
-    const { error: reactionError } =
-      await db.functions.invoke("whatsapp-reaction", {
-        body: {
-          siparis_no: siparisNo,
-          emoji: "📦"
-        }
-      });
-
-    if(reactionError){
-      console.error("WhatsApp reaksiyon hatası:", reactionError);
-    }
-
-  } catch(err) {
-    console.error("WhatsApp reaksiyon hatası:", err);
-  }
-
-  // Telefonda yalnızca hazırlama; masaüstünde yazdırma seçimi.
-  if(!isMobilePreparation())openPrintChooser();
-
-  toast("Sipariş Hazırlandı 📦");
-
-  closeModal();
-
-  setTimeout(() => loadOrders(true), 1000);
+async function directShipFromDetail(button){
+  if(button.disabled||selectedOrder?.kargo_durumu!=="Bekliyor")return;
+  const siparisNo=selectedOrder.siparis_no;
+  button.disabled=true;
+  try{await sendToCargo(siparisNo,{prepareFirst:true});}
+  finally{button.disabled=false;}
 }
 
 function cargoPdfFilename(order) {
@@ -2805,7 +2761,7 @@ Object.assign(window, {
   showErrorDetail,
 
   setWaiting,
-  markPrepared,
+  directShipFromDetail,
   sendToCargo,
   shipPreparedFromList,
   directShipFromList,
