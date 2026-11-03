@@ -7,7 +7,7 @@
  const p=new URLSearchParams(location.search),ref=p.get("ref")||"",status=document.getElementById("status");let url;
  try{
   url=new URL(p.get("url")||"");
-  if(!/^(?:(?:GZI-\d+|AKH\d+)-R\d+|GAZİ-\d+(?:-R\d+)?)$/.test(ref)||url.protocol!=="https:"||url.hostname!=="mn.tc"||url.username||url.password||url.port||url.pathname!=="/"||!/^[A-Za-z0-9]{8,80}$/.test(url.searchParams.get("rtnid")||""))throw Error("Geçersiz iade fişi.");
+  if(!/^(?:GZ-\d+|GZ\d+R[1-9]\d*|(?:GZI-\d+|AKH\d+)-R\d+|GAZİ-\d+(?:-R\d+)?)$/.test(ref)||url.protocol!=="https:"||url.hostname!=="mn.tc"||url.username||url.password||url.port||url.pathname!=="/"||!/^[A-Za-z0-9]{8,80}$/.test(url.searchParams.get("rtnid")||""))throw Error("Geçersiz iade fişi.");
   const response=await fetch("https://jarsxtpqzqzhlshpmgot.supabase.co/functions/v1/gazi-return-print?"+new URLSearchParams({ref,rtnid:url.searchParams.get("rtnid")}),{signal:AbortSignal.timeout(35000)});
   if(!response.ok)throw Error("DHL iade barkodu alınamadı. Sayfayı yenileyip tekrar deneyiniz.");
   const data=await response.json();
