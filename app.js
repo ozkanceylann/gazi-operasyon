@@ -1342,6 +1342,30 @@ function cargoMovementIdentity(movement){
   return `<span class="cargo-movement-identity">${fields.join(' · ')}</span>`;
 }
 
+function returnTrackingButton(order){
+  if(!isGaziAdmin||!order.iade_kodu||!returnLabelUrl(order.iade_etiket_url))return "";
+  return `<button type="button" class="btn-open" onclick="refreshReturnMovements(${Number(order.siparis_no)},this)">İade Hareketlerini Güncelle</button>`;
+}
+
+window.refreshReturnMovements=async function(id,button){
+  if(!isGaziAdmin||busy.iade.has(id))return;
+  busy.iade.add(id);
+  button.disabled=true;
+  button.textContent="İade hareketleri sorgulanıyor…";
+  try{
+    const {data:session}=await db.auth.getSession();
+    if(!session.session?.access_token)throw new Error("Panele yeniden giriş yapın.");
+    const response=await fetch(SUPABASE_URL+"/functions/v1/gazi-return-tracking",{method:"POST",
+      headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+session.session.access_token,"Content-Type":"application/json"},
+      body:JSON.stringify({siparis_no:id}),signal:AbortSignal.timeout(50000)});
+    const result=await response.json();
+    if(!response.ok||result.success!==true)throw new Error(result.message||"İade hareketleri alınamadı.");
+    toast(result.message,7000);
+    if(Number(selectedOrder?.siparis_no)===id)await openOrder(id);
+  }catch(error){toast(error.message||"İade hareketleri alınamadı.",10000);}
+  finally{busy.iade.delete(id);button.disabled=false;button.textContent="İade Hareketlerini Güncelle";}
+};
+
 function returnCancelButton(order){
   if(!isGaziAdmin||!order.iade_kodu||!returnLabelUrl(order.iade_etiket_url)
     ||order.iade_takip_kodu||order.iade_teslim_tarihi
@@ -1373,14 +1397,14 @@ window.cancelReturnLabel=async function(id,button){
 };
 
 function renderCargoTracking(order){
-  if(!order.kargo_takip_kodu&&!order.orderinvoiceid)return `<details class="detail-group detail-movement-history"><summary>Kargo hareketleri <span class="disclosure-action"></span></summary><div class="detail-cargo-actions">${returnCancelButton(order)}</div><p class="cargo-empty">Henüz kayıtlı kargo hareketi yok.</p></details>`;
+  if(!order.kargo_takip_kodu&&!order.orderinvoiceid)return `<details class="detail-group detail-movement-history"><summary>Kargo hareketleri <span class="disclosure-action"></span></summary><div class="detail-cargo-actions">${returnTrackingButton(order)}${returnCancelButton(order)}</div><p class="cargo-empty">Henüz kayıtlı kargo hareketi yok.</p></details>`;
   const tracking=cargoTrackingData(order);
   const movements=sortCargoMovements(tracking?.movements);
   const timeline=movements.map(m=>`<li><strong>${escapeHtml(m.eventStatus||"Kargo hareketi")}</strong><span>${escapeHtml(m.eventDateTime||m.eventDateTime2||"")} · ${cargoBranchContact(m)}</span>${m.description?`<span>${escapeHtml(m.description)}</span>`:""}${cargoMovementIdentity(m)}</li>`).join("");
   const url=order.kargo_takip_url;
   let link="";try{if(new URL(url).protocol==="https:")link=`<a class="btn-open" target="_blank" rel="noopener noreferrer" href="${escapeHtml(url)}">Kargo Takip Sayfası</a>`;}catch{}
   const detailButton=isLiveShipment(order)?`<button class="btn-open" type="button" data-cargo-detail-refresh onclick="refreshSelectedCargoMovements(${Number(order.siparis_no)})">Hareket geçmişini getir</button>`:"";
-  return `<details class="detail-group cargo-detail detail-movement-history"><summary>Kargo hareketleri <span class="disclosure-count">${movements.length} kayıt</span><span class="disclosure-action"></span></summary><div class="detail-cargo-heading"><div class="detail-title">Kargo ve teslimat</div><span class="detail-tracking-number">${escapeHtml(order.kargo_takip_kodu||"Takip no bekleniyor")}</span></div>${cargoStatusBadge(order,{compact:true})}<div class="detail-cargo-actions">${link}${detailButton}${returnCancelButton(order)}${isGaziAdmin&&canCancelShipment(order)?`<button type="button" class="btn-danger" data-cancel-shipment onclick="cancelShipmentToWaiting(${Number(order.siparis_no)},this)">Gönderiyi İptal Et</button>`:""}</div><div class="detail-cargo-events">${renderCargoPieces(order)}${timeline?`<ol class="cargo-timeline">${timeline}</ol>`:"<p class='cargo-empty'>Henüz kayıtlı kargo hareketi yok.</p>"}${tracking?.movementError?`<p class="cargo-warning">${escapeHtml(tracking.movementError)}</p>`:""}</div></details>`;
+  return `<details class="detail-group cargo-detail detail-movement-history"><summary>Kargo hareketleri <span class="disclosure-count">${movements.length} kayıt</span><span class="disclosure-action"></span></summary><div class="detail-cargo-heading"><div class="detail-title">Kargo ve teslimat</div><span class="detail-tracking-number">${escapeHtml(order.kargo_takip_kodu||"Takip no bekleniyor")}</span></div>${cargoStatusBadge(order,{compact:true})}<div class="detail-cargo-actions">${link}${detailButton}${returnTrackingButton(order)}${returnCancelButton(order)}${isGaziAdmin&&canCancelShipment(order)?`<button type="button" class="btn-danger" data-cancel-shipment onclick="cancelShipmentToWaiting(${Number(order.siparis_no)},this)">Gönderiyi İptal Et</button>`:""}</div><div class="detail-cargo-events">${renderCargoPieces(order)}${timeline?`<ol class="cargo-timeline">${timeline}</ol>`:"<p class='cargo-empty'>Henüz kayıtlı kargo hareketi yok.</p>"}${tracking?.movementError?`<p class="cargo-warning">${escapeHtml(tracking.movementError)}</p>`:""}</div></details>`;
 }
 
 
