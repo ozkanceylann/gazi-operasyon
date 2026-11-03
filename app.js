@@ -950,7 +950,7 @@ function returnLabelUrl(value){
 }
 function returnSlipUrl(reference,value){
   const url=returnLabelUrl(value);
-  if(!url||!/^(?:GZI-\d+|AKH\d+)-R\d+$/.test(String(reference)))return "";
+  if(!url||!/^(?:(?:GZI-\d+|AKH\d+)-R\d+|GAZİ-\d+(?:-R\d+)?)$/.test(String(reference)))return "";
   return "/iade-fisi.html?"+new URLSearchParams({ref:String(reference),url}).toString();
 }
 function returnOrderActions(order){
@@ -1342,15 +1342,45 @@ function cargoMovementIdentity(movement){
   return `<span class="cargo-movement-identity">${fields.join(' · ')}</span>`;
 }
 
+function returnCancelButton(order){
+  if(!isGaziAdmin||!order.iade_kodu||!returnLabelUrl(order.iade_etiket_url)
+    ||order.iade_takip_kodu||order.iade_teslim_tarihi
+    ||!["İade teslim bekliyor","Etiket Oluşturuldu"].includes(returnStage(order)))return "";
+  return `<button type="button" class="btn-danger" data-return-reference="${escapeHtml(order.iade_kodu)}" onclick="cancelReturnLabel(${Number(order.siparis_no)},this)">İade Fişini İptal Et</button>`;
+}
+
+window.cancelReturnLabel=async function(id,button){
+  if(!isGaziAdmin||busy.iade.has(id))return;
+  busy.iade.add(id);
+  button.disabled=true;
+  try{
+    const reference=button.dataset.returnReference;
+    if(!await confirmModal({title:"İade Fişini İptal Et",text:`${reference} numaralı iade fişi DHL üzerinden iptal edilsin mi?`,confirmText:"İade Fişini İptal Et",cancelText:"Vazgeç"}))return;
+    if(!await confirmModal({title:"Eski İade Fişi",text:"İptal edilen fişi imha edin ve müşteriyle paylaşılmışsa artık kullanılmaması gerektiğini bildirin.",confirmText:"İptali Onayla",cancelText:"Vazgeç"}))return;
+    button.textContent="İptal ediliyor…";
+    const {data:session}=await db.auth.getSession();
+    if(!session.session?.access_token)throw new Error("Panele yeniden giriş yapın.");
+    const response=await fetch(SUPABASE_URL+"/functions/v1/gazi-return-cancel",{method:"POST",
+      headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+session.session.access_token,"Content-Type":"application/json"},
+      body:JSON.stringify({siparis_no:id,reference}),signal:AbortSignal.timeout(70000)});
+    const result=await response.json();
+    if(!response.ok||result.success!==true)throw new Error(result.message||"İade fişi iptal edilemedi.");
+    toast("İade fişi iptal edildi. Yeni iade etiketi oluşturabilirsiniz.",7000);
+    if(document.getElementById("searchInput").value.trim())await searchOrders();else await loadOrders(true);
+    if(Number(selectedOrder?.siparis_no)===id)await openOrder(id);
+  }catch(error){toast(error.name==="TimeoutError"?"İptal sonucu bekleniyor. DHL ve sipariş kaydını kontrol edin.":error.message,10000);}
+  finally{busy.iade.delete(id);button.disabled=false;button.textContent="İade Fişini İptal Et";}
+};
+
 function renderCargoTracking(order){
-  if(!order.kargo_takip_kodu&&!order.orderinvoiceid)return `<details class="detail-group detail-movement-history"><summary>Kargo hareketleri <span class="disclosure-action"></span></summary><p class="cargo-empty">Henüz kayıtlı kargo hareketi yok.</p></details>`;
+  if(!order.kargo_takip_kodu&&!order.orderinvoiceid)return `<details class="detail-group detail-movement-history"><summary>Kargo hareketleri <span class="disclosure-action"></span></summary><div class="detail-cargo-actions">${returnCancelButton(order)}</div><p class="cargo-empty">Henüz kayıtlı kargo hareketi yok.</p></details>`;
   const tracking=cargoTrackingData(order);
   const movements=sortCargoMovements(tracking?.movements);
   const timeline=movements.map(m=>`<li><strong>${escapeHtml(m.eventStatus||"Kargo hareketi")}</strong><span>${escapeHtml(m.eventDateTime||m.eventDateTime2||"")} · ${cargoBranchContact(m)}</span>${m.description?`<span>${escapeHtml(m.description)}</span>`:""}${cargoMovementIdentity(m)}</li>`).join("");
   const url=order.kargo_takip_url;
   let link="";try{if(new URL(url).protocol==="https:")link=`<a class="btn-open" target="_blank" rel="noopener noreferrer" href="${escapeHtml(url)}">Kargo Takip Sayfası</a>`;}catch{}
   const detailButton=isLiveShipment(order)?`<button class="btn-open" type="button" data-cargo-detail-refresh onclick="refreshSelectedCargoMovements(${Number(order.siparis_no)})">Hareket geçmişini getir</button>`:"";
-  return `<details class="detail-group cargo-detail detail-movement-history"><summary>Kargo hareketleri <span class="disclosure-count">${movements.length} kayıt</span><span class="disclosure-action"></span></summary><div class="detail-cargo-heading"><div class="detail-title">Kargo ve teslimat</div><span class="detail-tracking-number">${escapeHtml(order.kargo_takip_kodu||"Takip no bekleniyor")}</span></div>${cargoStatusBadge(order,{compact:true})}<div class="detail-cargo-actions">${link}${detailButton}${isGaziAdmin&&canCancelShipment(order)?`<button type="button" class="btn-danger" data-cancel-shipment onclick="cancelShipmentToWaiting(${Number(order.siparis_no)},this)">Gönderiyi İptal Et</button>`:""}</div><div class="detail-cargo-events">${renderCargoPieces(order)}${timeline?`<ol class="cargo-timeline">${timeline}</ol>`:"<p class='cargo-empty'>Henüz kayıtlı kargo hareketi yok.</p>"}${tracking?.movementError?`<p class="cargo-warning">${escapeHtml(tracking.movementError)}</p>`:""}</div></details>`;
+  return `<details class="detail-group cargo-detail detail-movement-history"><summary>Kargo hareketleri <span class="disclosure-count">${movements.length} kayıt</span><span class="disclosure-action"></span></summary><div class="detail-cargo-heading"><div class="detail-title">Kargo ve teslimat</div><span class="detail-tracking-number">${escapeHtml(order.kargo_takip_kodu||"Takip no bekleniyor")}</span></div>${cargoStatusBadge(order,{compact:true})}<div class="detail-cargo-actions">${link}${detailButton}${returnCancelButton(order)}${isGaziAdmin&&canCancelShipment(order)?`<button type="button" class="btn-danger" data-cancel-shipment onclick="cancelShipmentToWaiting(${Number(order.siparis_no)},this)">Gönderiyi İptal Et</button>`:""}</div><div class="detail-cargo-events">${renderCargoPieces(order)}${timeline?`<ol class="cargo-timeline">${timeline}</ol>`:"<p class='cargo-empty'>Henüz kayıtlı kargo hareketi yok.</p>"}${tracking?.movementError?`<p class="cargo-warning">${escapeHtml(tracking.movementError)}</p>`:""}</div></details>`;
 }
 
 
