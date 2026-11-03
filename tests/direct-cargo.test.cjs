@@ -30,10 +30,10 @@ async function scenario(options={}){
  return {calls,order};
 }
 (async()=>{
- let r=await scenario();assert.equal(r.calls.updates,1);assert.equal(r.calls.shipping,1);assert.deepEqual(r.calls.reactions,['📦','🚚']);assert.equal(r.calls.confirm,1);
+ let r=await scenario();assert.equal(r.calls.updates,1);assert.equal(r.calls.shipping,1);assert.deepEqual(r.calls.reactions,['🚚']);assert.equal(r.calls.confirm,1);
  r=await scenario({stage:'Hazırlandı'});assert.equal(r.calls.updates,0);assert.equal(r.calls.shipping,1);
  for(const options of [{cancel:true},{approvalBlocked:true},{busy:true},{stage:'İptal'},{stage:'Kargolandı'},{stage:'Tamamlandı'},{test:true},{review:true},{badKg:true},{raced:true}]){r=await scenario(options);assert.equal(r.calls.shipping,0,JSON.stringify(options));}
- r=await scenario({fail:true});assert.equal(r.order.kargo_durumu,'Hazırlandı');assert.equal(r.calls.shipping,1);assert(r.calls.messages.some(m=>m.includes('kargolama tamamlanamadı')));
+ r=await scenario({fail:true});assert.equal(r.order.kargo_durumu,'Hazırlandı');assert.equal(r.calls.shipping,1);assert.deepEqual(r.calls.reactions,[]);assert(r.calls.messages.some(m=>m.includes('kargolama tamamlanamadı')));
  r=await scenario({reactionFail:true});assert.equal(r.calls.shipping,1);assert.equal(r.order.kargo_durumu,'Kargolandı');
  r=await scenario({detail:true});assert.deepEqual(r.calls.tabs,['kargolandi']);
  r=await scenario({detail:true,fail:true});assert.equal(r.calls.reloads,1);
