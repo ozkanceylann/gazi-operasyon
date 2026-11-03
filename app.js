@@ -957,13 +957,9 @@ function returnLabelUrl(value){
       && url.pathname==="/" && /^[A-Za-z0-9]+$/.test(url.searchParams.get("rtnid")||"") ? url.href : "";
   } catch { return ""; }
 }
-function fittedReturnSlipUrl(reference,value){
-  const url=returnLabelUrl(value);
-  return url ? "/iade-fisi.html?"+new URLSearchParams({ref:String(reference),url}).toString() : "";
-}
 function returnOrderActions(order){
   const url=returnLabelUrl(order.iade_etiket_url);
-  if(url)return `<div class="return-actions"><div class="return-action-buttons"><a class="btn-return-label" href="${escapeHtml(fittedReturnSlipUrl(order.iade_kodu,url))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">İade Fişini Aç</a></div><span class="return-code">${escapeHtml(order.iade_kodu)}</span></div>`;
+  if(url)return `<div class="return-actions"><div class="return-action-buttons"><a class="btn-return-label" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">İade Fişini Aç</a></div><span class="return-code">${escapeHtml(order.iade_kodu)}</span></div>`;
   if(currentTab==="tamamlandi" && (order.isDelivered===true||Number(order.shipmentStatusCode)===5))
     return `<button class="btn-return-label btn-return-label-create" type="button" onclick="event.stopPropagation(); createReturnLabel(${Number(order.siparis_no)}, this)">İADE Etiketi Oluştur</button>`;
   return `<span class="cargo-checked">Geri dönüş kargosu</span>`;
@@ -981,7 +977,7 @@ function renderReturnMovements(order){
 function renderReturnDetail(order){
   const url=returnLabelUrl(order.iade_etiket_url);
   if(!url)return "";
-  return `<div class="detail-group return-detail"><div class="detail-title">İade Fişi</div><p>İade kodu: <strong>${escapeHtml(order.iade_kodu)}</strong></p><p>${escapeHtml(returnStage(order))} · ${escapeHtml(formatDateTimeTR(order.iade_tarihi))}</p><div class="return-action-buttons return-detail-buttons"><a class="btn-return-label" href="${escapeHtml(fittedReturnSlipUrl(order.iade_kodu,url))}" target="_blank" rel="noopener noreferrer">İade Fişini Aç</a>${returnCancelButton(order)}<button type="button" class="btn-return-label" data-return-url="${escapeHtml(url)}" onclick="copyReturnDetailLink(this)">Fiş Linkini Kopyala</button></div></div>`;
+  return `<div class="detail-group return-detail"><div class="detail-title">İade Fişi</div><p>İade kodu: <strong>${escapeHtml(order.iade_kodu)}</strong></p><p>${escapeHtml(returnStage(order))} · ${escapeHtml(formatDateTimeTR(order.iade_tarihi))}</p><div class="return-action-buttons return-detail-buttons"><a class="btn-return-label" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">İade Fişini Aç</a>${returnCancelButton(order)}<button type="button" class="btn-return-label" data-return-url="${escapeHtml(url)}" onclick="copyReturnDetailLink(this)">Fiş Linkini Kopyala</button></div></div>`;
 }
 window.copyReturnDetailLink=async function(button){
   const url=returnLabelUrl(button.dataset.returnUrl);
@@ -998,7 +994,7 @@ function showReturnLabel(result){
   const url=returnLabelUrl(result.url);if(!url)throw new Error("İade fişi bağlantısı doğrulanamadı.");
   const root=document.getElementById("alertRoot"),wrap=document.createElement("div");
   wrap.className="alert-backdrop";
-  wrap.innerHTML=`<div class="alert-card return-result" role="dialog" aria-modal="true" aria-label="İade etiketi"><div class="alert-title">İade Etiketi Hazır</div><p>İade kodu: <strong>${escapeHtml(result.reference)}</strong></p><p>Müşteri bu kodla DHL şubesine başvurabilir. Kargo ücreti Gazi hesabına aittir.</p><a class="btn-return-label" href="${escapeHtml(fittedReturnSlipUrl(result.reference,url))}" target="_blank" rel="noopener noreferrer">İade Fişini Aç</a><div class="alert-actions"><button class="btn-ghost" type="button" data-copy-return>Fiş Linkini Kopyala</button><button class="btn-brand" type="button" data-close-return>Kapat</button></div><p role="status" data-copy-status></p></div>`;
+  wrap.innerHTML=`<div class="alert-card return-result" role="dialog" aria-modal="true" aria-label="İade etiketi"><div class="alert-title">İade Etiketi Hazır</div><p>İade kodu: <strong>${escapeHtml(result.reference)}</strong></p><p>Müşteri bu kodla DHL şubesine başvurabilir. Kargo ücreti Gazi hesabına aittir.</p><a class="btn-return-label" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">İade Fişini Aç</a><div class="alert-actions"><button class="btn-ghost" type="button" data-copy-return>Fiş Linkini Kopyala</button><button class="btn-brand" type="button" data-close-return>Kapat</button></div><p role="status" data-copy-status></p></div>`;
   root.appendChild(wrap);
   wrap.querySelector("[data-close-return]").onclick=()=>wrap.remove();
   wrap.querySelector("[data-copy-return]").onclick=async()=>{
