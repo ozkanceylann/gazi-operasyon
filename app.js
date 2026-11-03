@@ -955,7 +955,7 @@ function returnSlipUrl(reference,value){
 }
 function returnOrderActions(order){
   const url=returnLabelUrl(order.iade_etiket_url);
-  if(url)return `<div class="return-actions"><a class="btn-return-label" href="${escapeHtml(returnSlipUrl(order.iade_kodu,url))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">İade Fişini Aç</a><span class="return-code">${escapeHtml(order.iade_kodu)}</span></div>`;
+  if(url)return `<div class="return-actions"><div class="return-action-buttons"><a class="btn-return-label" href="${escapeHtml(returnSlipUrl(order.iade_kodu,url))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">İade Fişini Aç</a>${currentTab==="iade"?returnCancelButton(order):""}</div><span class="return-code">${escapeHtml(order.iade_kodu)}</span></div>`;
   if(currentTab==="tamamlandi" && (order.isDelivered===true||Number(order.shipmentStatusCode)===5))
     return `<button class="btn-return-label btn-return-label-create" type="button" onclick="event.stopPropagation(); createReturnLabel(${Number(order.siparis_no)}, this)">İADE Etiketi Oluştur</button>`;
   return `<span class="cargo-checked">Geri dönüş kargosu</span>`;
@@ -1378,7 +1378,7 @@ function returnCancelButton(order){
   if(!isGaziAdmin||!order.iade_kodu||!returnLabelUrl(order.iade_etiket_url)
     ||order.iade_takip_kodu||order.iade_teslim_tarihi
     ||!["İade teslim bekliyor","Etiket Oluşturuldu"].includes(returnStage(order)))return "";
-  return `<button type="button" class="btn-danger" data-return-reference="${escapeHtml(order.iade_kodu)}" onclick="cancelReturnLabel(${Number(order.siparis_no)},this)">İade Fişini İptal Et</button>`;
+  return `<button type="button" class="btn-danger" data-return-reference="${escapeHtml(order.iade_kodu)}" onclick="event.stopPropagation(); cancelReturnLabel(${Number(order.siparis_no)},this)">İade Fişini İptal Et</button>`;
 }
 
 window.cancelReturnLabel=async function(id,button){
