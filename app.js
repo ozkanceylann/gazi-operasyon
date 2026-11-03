@@ -950,7 +950,7 @@ function returnLabelUrl(value){
 }
 function returnSlipUrl(reference,value){
   const url=returnLabelUrl(value);
-  if(!url||!/^(?:(?:GZI-\d+|AKH\d+)-R\d+|GAZİ-\d+(?:-R\d+)?)$/.test(String(reference)))return "";
+  if(!url||!/^(?:GZ-\d+|GZ\d+R[1-9]\d*|(?:GZI-\d+|AKH\d+)-R\d+|GAZİ-\d+(?:-R\d+)?)$/.test(String(reference)))return "";
   return "/iade-fisi.html?"+new URLSearchParams({ref:String(reference),url}).toString();
 }
 function returnOrderActions(order){
