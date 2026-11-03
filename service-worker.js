@@ -1,7 +1,7 @@
 // ================================
 // 🔥 VERSION = DEPLOY TARİHİ
 // ================================
-const VERSION = "20261102-shipping-approval-132";
+const VERSION = "20261103-direct-cargo-133";
 const CACHE_NAME = `siparis-app-${VERSION}`;
 
 // Cache edilecek dosyalar
