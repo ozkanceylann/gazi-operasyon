@@ -2878,4 +2878,4 @@ document.addEventListener("click", event => {
   document.body.append(dialog);
   dialog.showModal();
   close.focus();
-});
+}, true);
