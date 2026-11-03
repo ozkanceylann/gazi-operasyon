@@ -134,6 +134,11 @@ function toggleLoadMore(visible){
   const btn = document.getElementById("loadMoreBtn");
   if(!btn) return;
   btn.style.display = visible ? "block" : "none";
+  const lastButton=document.getElementById("lastOrderBtn");
+  if(lastButton)lastButton.style.display=(currentTab==="bekleyen" && !cargoFilterGlobal
+    && !document.getElementById("tabSearchInput")?.value.trim()
+    && !document.getElementById("searchInput")?.value.trim()
+    && document.querySelector("#ordersBody tr[data-order-id]"))?"block":"none";
 }
 
 // Sidebar menü tıklanınca otomatik kapanması (mobil)
@@ -346,7 +351,7 @@ async function loadCargoLabelQueue(start, end){
   return {data:pages.flatMap(page=>page.data||[]),error:error||null,count:pendingCount+savedCount};
 }
 
-async function loadOrders(reset=false, forceCounts=true){
+async function loadOrders(reset=false, forceCounts=true, lastPage=false){
   if(reset)void refreshOperationCounts(forceCounts);
   if(document.getElementById("tabSearchInput")?.value.trim()) return searchOrders("tab",!reset);
   if(document.getElementById("searchInput")?.value.trim()) return searchOrders("all",!reset);
@@ -357,7 +362,7 @@ async function loadOrders(reset=false, forceCounts=true){
   if(loadButton){loadButton.disabled=true;loadButton.textContent="Yükleniyor…";}
   try {
   const tbody = document.getElementById("ordersBody");
-  if(reset){
+  if(reset && !lastPage){
     currentPage = 1;
     tbody.innerHTML = "";
   }
@@ -372,15 +377,16 @@ async function loadOrders(reset=false, forceCounts=true){
 
   q = applyCargoFilter(q);
 
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const end   = currentPage * PAGE_SIZE - 1;
+  const start = lastPage ? 0 : (currentPage - 1) * PAGE_SIZE;
+  const end = start + PAGE_SIZE - 1;
 
   const labelQueue = cargoFilterGlobal ? cargoFilter === "created" : currentTab === "kargolandi";
   const { data, error, count } = labelQueue
     ? await loadCargoLabelQueue(start, end)
-    : await orderReturnQuery(q,currentTab === "iade" && !cargoFilterGlobal).order("liste_sira_no", { ascending: currentTab === "bekleyen" }).order("siparis_no", { ascending: true }).range(start, end);
+    : await orderReturnQuery(q,currentTab === "iade" && !cargoFilterGlobal).order("liste_sira_no", { ascending: !lastPage && currentTab === "bekleyen" }).order("siparis_no", { ascending: !lastPage }).range(start, end);
   if (request !== listRequest) return;
   if(error){
+    if(lastPage)throw error;
     if(!reset)currentPage=Math.max(1,currentPage-1);
     if(reset)tbody.innerHTML = `<tr><td colspan="${getColumnCount()}">Liste yüklenemedi. Yeniden deneyin.</td></tr>`;
     toast("Liste yüklenemedi: " + error.message,6000);
@@ -389,9 +395,10 @@ async function loadOrders(reset=false, forceCounts=true){
     return;
   }
 
-  const hasMore = typeof count === "number"
+  const hasMore = !lastPage && (typeof count === "number"
     ? count > currentPage * PAGE_SIZE
-    : (data?.length === PAGE_SIZE);
+    : data?.length === PAGE_SIZE);
+  if(lastPage)data.reverse();
 
   if(!reset && (!data || data.length === 0)){
     toggleLoadMore(false);
@@ -401,12 +408,14 @@ async function loadOrders(reset=false, forceCounts=true){
   markExtras(data);
   if(request!==listRequest)return;
   renderTable(data, { append: !reset, hasMore });
+  if(lastPage)tbody.querySelector("tr[data-order-id]:last-child")?.scrollIntoView({behavior:"smooth",block:"center"});
   void hydrateExtras(data,()=>tbody.isConnected!==false,tbody);
   updateListHeading(false, `${tbody.children.length} sipariş gösteriliyor · Toplam ${count ?? data.length} kayıt`);
   } catch(error) {
     if(request!==listRequest)return;
     if(!reset)currentPage=Math.max(1,currentPage-1);
     toast("Liste yüklenemedi. Yeniden deneyin.",6000);
+    if(lastPage)updateListHeading(false,"Son sipariş yüklenemedi. Yeniden deneyin.");
   } finally {
     if(request===listRequest){
       listLoading=false;
@@ -2651,6 +2660,13 @@ function setTab(tab, operation="", forceCounts=false){
   return loadOrders(true,forceCounts);
 }
 
+async function goToLastOrder(button){
+  if(listLoading||button.disabled||button.style.display==="none"||currentTab!=="bekleyen")return;
+  button.disabled=true;
+  try{await loadOrders(true,false,true);}
+  finally{button.disabled=false;}
+}
+
 function loadMore(){
   if(listLoading)return;
   currentPage++;
@@ -2744,6 +2760,7 @@ Object.assign(window, {
   openOrderTakerSettings,
   loadOrders,
    loadMore,
+   goToLastOrder,
   setTab,
   searchOrders,
   searchActiveOrders,

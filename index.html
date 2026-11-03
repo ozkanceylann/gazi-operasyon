@@ -139,6 +139,7 @@
     </div>
 
     <button id="loadMoreBtn" class="btn-load-more" onclick="loadMore()">Daha Fazla</button>
+    <button id="lastOrderBtn" class="btn-load-more" type="button" onclick="goToLastOrder(this)" style="display:none">Son siparişe git</button>
 
   </main>
 
@@ -220,7 +221,7 @@ document.getElementById("orderModal").addEventListener("click", function(e){
   <script type="module">
     try {
       await window.waitConfig();
-      await import("./app.js?v=20261103-direct-one-reaction-140");
+      await import("./app.js?v=20261103-last-order-141");
       document.getElementById("brandLogo").src = CONFIG.logo;
       const brandTitle = document.getElementById("brandTitle");
       const brandName = document.createElement("span");
