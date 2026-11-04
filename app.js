@@ -2185,40 +2185,12 @@ async function openCargoPdf(w, base64, order, {trackPrint=true}={}){
   if(w.closed)throw new Error("Etiket penceresi kapatıldı. Etiketi Yazdır ile tekrar açabilirsiniz.");
   const filename=cargoPdfFilename(order);
   const bytes=Uint8Array.from(atob(base64),c=>c.charCodeAt(0));
-  const blob=new Blob([bytes],{type:"application/pdf"});
-  let url,cleanup,named=false;
-  try {
-    if(!navigator.serviceWorker?.controller || !window.caches)throw Error("Named preview unavailable");
-    // The current worker must support named responses; an old worker may still
-    // control the page briefly while an update is activating.
-    await new Promise((resolve,reject)=>{
-      const channel=new MessageChannel();
-      const timeout=setTimeout(()=>{channel.port1.close();reject(Error("Worker not ready"));},1500);
-      channel.port1.onmessage=event=>{clearTimeout(timeout);channel.port1.close();event.data===true?resolve():reject(Error("Unsupported worker"));};
-      navigator.serviceWorker.controller.postMessage({type:"gazi-cargo-pdf-support"},[channel.port2]);
-    });
-    const cache=await caches.open("gazi-pdf-previews-v1");
-    for(const request of await cache.keys()){
-      const previous=await cache.match(request);
-      if(Number(previous?.headers.get("X-Preview-Expires"))<=Date.now())await cache.delete(request);
-    }
-    url=new URL(`/__cargo_pdf__/${crypto.randomUUID()}/${encodeURIComponent(filename)}`,location.origin).href;
-    const ascii=filename.replace(/ı/g,"i").replace(/İ/g,"I").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\x20-\x7e]/g,"_");
-    const encoded=encodeURIComponent(filename).replace(/['()*]/g,c=>"%"+c.charCodeAt(0).toString(16).toUpperCase());
-    await cache.put(url,new Response(blob,{headers:{
-      "Content-Type":"application/pdf",
-      "Content-Disposition":`inline; filename="${ascii}"; filename*=UTF-8''${encoded}`,
-      "Cache-Control":"no-store",
-      "X-Preview-Expires":String(Date.now()+60*60*1000)
-    }}));
-    cleanup=()=>{cache.delete(url).catch(()=>{});};
-    named=true;
-  } catch {
-    // Without a controlling worker, provide an explicitly named download link.
-    url=URL.createObjectURL(blob);
-    cleanup=()=>URL.revokeObjectURL(url);
-  }
-  if(w.closed){cleanup();throw new Error("Etiket penceresi kapatıldı. Etiketi Yazdır ile tekrar açabilirsiniz.");}
+  // Keep the original PDF in the preview window itself. Both download controls
+  // read these bytes directly, without requesting a virtual server URL.
+  const file=new w.File([bytes],filename,{type:"application/pdf"});
+  const url=w.URL.createObjectURL(file);
+  // The browser releases this window's object URLs when it closes. Do not
+  // revoke on unload: that can race with a download already starting.
   w.document.title=filename.replace(/\.pdf$/i,"");
   w.document.body.replaceChildren();
   w.document.body.style.cssText="margin:0";
@@ -2234,7 +2206,6 @@ async function openCargoPdf(w, base64, order, {trackPrint=true}={}){
   frame.style.cssText=`display:block;border:0;width:100%;height:calc(100vh - 42px)`;
   w.document.body.appendChild(frame);
   w.document.addEventListener("keydown",event=>{if(event.key==="Escape"){event.preventDefault();w.close();}});
-  w.addEventListener("unload",cleanup,{once:true});
   if(trackPrint)await recordCargoLabelPrint(order);
 }
 
