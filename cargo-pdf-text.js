@@ -46,7 +46,7 @@
   const {PDFDocument,rgb,degrees,pushGraphicsState,popGraphicsState,rectangle,clip,endPath}=PDFLib;
   const doc=await PDFDocument.load(bytes);doc.registerFontkit(fontkit);
   const font=await doc.embedFont(fontBytes,{subset:true});
-  const products=productText(order),amount=amountText(order);
+  const amount=amountText(order);
   const pages=doc.getPages();
   for(const page of pages){
    const {width,height}=page.getSize();
@@ -59,11 +59,11 @@
    }
    function text(line,u,v,size){page.drawText(line,{x:(110-v)*DOT,y:height-(150+u)*DOT,size,font,rotate:degrees(-90),color:rgb(0,0,0)});}
    const productWidth=(amount?540:640)-4;
-   if(Number(order.siparis_no)===10769){
-    // Limited pilot: two bullet columns for order 10769 only.
+   {
+    // All orders: up to four products in one column; five or more in two.
     const items=productItems(order),middle=Math.ceil(items.length/2);
-    const columns=[items.slice(0,middle),items.slice(middle)];
-    const gap=16,columnWidth=(productWidth-gap)/2;
+    const columns=items.length<=4?[items]:[items.slice(0,middle),items.slice(middle)];
+    const gap=16,columnWidth=(productWidth-gap*(columns.length-1))/columns.length;
     let low=0.001,high=24*DOT,best;
     for(let i=0;i<30;i++){
      const size=(low+high)/2,lineHeight=size*1.25;
@@ -76,9 +76,6 @@
      text('Sipariş: '+order.siparis_no,2,baseline,best.size);
      best.rows.forEach((rows,column)=>rows.forEach((line,i)=>text(line,2+column*(columnWidth+gap),baseline+(i+1)*best.lineHeight/DOT,best.size)));
     });
-   }else{
-    const layout=fit(products,font,productWidth*DOT,86*DOT,24*DOT);
-    field(0,0,amount?540:640,90,()=>layout.lines.forEach((line,i)=>text(line,2,2+(i*layout.lineHeight+font.heightAtSize(layout.size,{descender:false}))/DOT,layout.size)));
    }
    if(amount){
     let size=24*DOT;
