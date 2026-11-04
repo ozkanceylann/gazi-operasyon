@@ -2185,8 +2185,8 @@ async function openCargoPdf(w, base64, order, {trackPrint=true}={}){
   if(w.closed)throw new Error("Etiket penceresi kapatıldı. Etiketi Yazdır ile tekrar açabilirsiniz.");
   const filename=cargoPdfFilename(order);
   const bytes=Uint8Array.from(atob(base64),c=>c.charCodeAt(0));
-  // Keep the original PDF in the preview window itself. Both download controls
-  // read these bytes directly, without requesting a virtual server URL.
+  // Keep the original PDF in the preview window. The named download link
+  // saves these bytes directly, without requesting a virtual server URL.
   const file=new w.File([bytes],filename,{type:"application/pdf"});
   const url=w.URL.createObjectURL(file);
   // The browser releases this window's object URLs when it closes. Do not
@@ -2198,13 +2198,21 @@ async function openCargoPdf(w, base64, order, {trackPrint=true}={}){
   const download=w.document.createElement("a");
   download.href=url;download.download=filename;
   const parcelCount=Number(order?.kargo_adet);
-  download.textContent=(Number.isSafeInteger(parcelCount)&&parcelCount>1?parcelCount+" koli · ":"")+"Tüm etiketleri PDF indir";
+  download.textContent=(Number.isSafeInteger(parcelCount)&&parcelCount>1?parcelCount+" koli · ":"")+"PDF indir · "+filename;
   download.style.cssText="display:block;box-sizing:border-box;min-height:42px;padding:10px;background:#e6f1ea;color:#20543b;font:14px system-ui;text-decoration:none";
-  w.document.body.appendChild(download);
+  const toolbar=w.document.createElement("div");
+  toolbar.style.cssText="display:flex;align-items:center;gap:8px;background:#e6f1ea;min-height:48px";
+  download.style.flex="1";
+  const print=w.document.createElement("button");
+  print.type="button";print.textContent="Yazdır";
+  print.style.cssText="margin:4px 10px;padding:10px 16px;cursor:pointer";
+  toolbar.append(download,print);
+  w.document.body.appendChild(toolbar);
   const frame=w.document.createElement("iframe");
-  frame.title=filename;frame.src=url+"#view=FitH";
-  frame.style.cssText=`display:block;border:0;width:100%;height:calc(100vh - 42px)`;
+  frame.title=filename;frame.src=url+"#view=FitH&toolbar=0";
+  frame.style.cssText=`display:block;border:0;width:100%;height:calc(100vh - 48px)`;
   w.document.body.appendChild(frame);
+  print.onclick=()=>{frame.contentWindow.focus();frame.contentWindow.print();};
   w.document.addEventListener("keydown",event=>{if(event.key==="Escape"){event.preventDefault();w.close();}});
   if(trackPrint)await recordCargoLabelPrint(order);
 }
