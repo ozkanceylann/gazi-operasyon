@@ -1,11 +1,14 @@
 (function(root){
  'use strict';
  const DOT=72/203;
- function productText(o){
+ function productItems(o){
   let raw=o.urun_bilgisi??'';
   if(typeof raw==='string'){try{const p=JSON.parse(raw);if(Array.isArray(p))raw=p;}catch{}}
   const products=(Array.isArray(raw)?raw:[raw]).map(String).flatMap(x=>x.split(/\\n|\r?\n/)).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean);
-  return `Sipariş: ${o.siparis_no} / ${products.join(' / ')}`.normalize('NFC');
+  return products.map(p=>p.normalize('NFC'));
+ }
+ function productText(o){
+  return `Sipariş: ${o.siparis_no} / ${productItems(o).join(' / ')}`;
  }
  function amountText(o){
   let value=String(o.toplam_tutar??'').trim().replace(/(?:TL|TRY|₺)/gi,'').replace(/\s/g,'');
@@ -56,8 +59,27 @@
    }
    function text(line,u,v,size){page.drawText(line,{x:(110-v)*DOT,y:height-(150+u)*DOT,size,font,rotate:degrees(-90),color:rgb(0,0,0)});}
    const productWidth=(amount?540:640)-4;
-   const layout=fit(products,font,productWidth*DOT,86*DOT,24*DOT);
-   field(0,0,amount?540:640,90,()=>layout.lines.forEach((line,i)=>text(line,2,2+(i*layout.lineHeight+font.heightAtSize(layout.size,{descender:false}))/DOT,layout.size)));
+   if(Number(order.siparis_no)===10769){
+    // Limited pilot: two bullet columns for order 10769 only.
+    const items=productItems(order),middle=Math.ceil(items.length/2);
+    const columns=[items.slice(0,middle),items.slice(middle)];
+    const gap=16,columnWidth=(productWidth-gap)/2;
+    let low=0.001,high=24*DOT,best;
+    for(let i=0;i<30;i++){
+     const size=(low+high)/2,lineHeight=size*1.25;
+     const rows=columns.map(list=>list.flatMap(item=>wrap('• '+item,font,size,columnWidth*DOT)));
+     if((1+Math.max(...rows.map(r=>r.length)))*lineHeight<=86*DOT&&font.widthOfTextAtSize('Sipariş: '+order.siparis_no,size)<=productWidth*DOT){best={size,lineHeight,rows};low=size;}else high=size;
+    }
+    if(!best)throw Error('Ürün listesi etiket alanına sığmadı.');
+    field(0,0,amount?540:640,90,()=>{
+     const baseline=2+font.heightAtSize(best.size,{descender:false})/DOT;
+     text('Sipariş: '+order.siparis_no,2,baseline,best.size);
+     best.rows.forEach((rows,column)=>rows.forEach((line,i)=>text(line,2+column*(columnWidth+gap),baseline+(i+1)*best.lineHeight/DOT,best.size)));
+    });
+   }else{
+    const layout=fit(products,font,productWidth*DOT,86*DOT,24*DOT);
+    field(0,0,amount?540:640,90,()=>layout.lines.forEach((line,i)=>text(line,2,2+(i*layout.lineHeight+font.heightAtSize(layout.size,{descender:false}))/DOT,layout.size)));
+   }
    if(amount){
     let size=24*DOT;
     while(font.widthOfTextAtSize(amount,size)>80*DOT)size*=0.95;
