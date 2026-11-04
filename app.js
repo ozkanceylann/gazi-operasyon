@@ -2184,7 +2184,11 @@ async function openCargoPdf(w, base64, order, {trackPrint=true}={}){
   if(!base64?.startsWith("JVBER")) throw new Error("Geçerli etiket PDF'si alınamadı.");
   if(w.closed)throw new Error("Etiket penceresi kapatıldı. Etiketi Yazdır ile tekrar açabilirsiniz.");
   const filename=cargoPdfFilename(order);
-  const bytes=Uint8Array.from(atob(base64),c=>c.charCodeAt(0));
+  let bytes=Uint8Array.from(atob(base64),c=>c.charCodeAt(0));
+  if(Object.prototype.hasOwnProperty.call(order||{}, "urun_bilgisi")){
+    bytes=await CargoPdfText.apply(bytes,order);
+    if(w.closed)throw new Error("Etiket penceresi kapatıldı.");
+  }
   // Keep the original PDF in the preview window. The named download link
   // saves these bytes directly, without requesting a virtual server URL.
   const file=new w.File([bytes],filename,{type:"application/pdf"});

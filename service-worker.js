@@ -1,7 +1,7 @@
 // ================================
 // 🔥 VERSION = DEPLOY TARİHİ
 // ================================
-const VERSION = "20261103-dhl-image-only-150";
+const VERSION = "20261105-selectable-label-151";
 const CACHE_NAME = `siparis-app-${VERSION}`;
 
 // Cache edilecek dosyalar
@@ -14,6 +14,10 @@ const ASSETS = [
   "/style.css",
   "/theme.css",
   "/app.js",
+  "/cargo-pdf-text.js",
+  "/assets/pdf-lib.min.js",
+  "/assets/fontkit.min.js",
+  "/assets/label-font.ttf",
   "/gonderi-sorgulama.html",
   "/gonderi-sorgulama.js",
   "/gonderi-sorgulama.css",

@@ -218,10 +218,13 @@ document.getElementById("orderModal").addEventListener("click", function(e){
   <script src="customer-order-history.js?v=20261022-order-colors-98"></script>
   <script src="shipping-approval.js?v=20261102-shipping-approval-132"></script>
   <script src="order-receipts.js?v=20261102-shipping-approval-132"></script>
+  <script src="assets/pdf-lib.min.js"></script>
+  <script src="assets/fontkit.min.js"></script>
+  <script src="cargo-pdf-text.js?v=20261105-selectable"></script>
   <script type="module">
     try {
       await window.waitConfig();
-      await import("./app.js?v=20261103-return-detail-only-145");
+      await import("./app.js?v=20261105-selectable-label");
       document.getElementById("brandLogo").src = CONFIG.logo;
       const brandTitle = document.getElementById("brandTitle");
       const brandName = document.createElement("span");
