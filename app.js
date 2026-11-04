@@ -1210,6 +1210,7 @@ function applyCargoFilter(query){
   return expression ? query.or(expression) : query;
 }
 function filterCargo(key){
+  cancelAutoSearch();
   operationFilter="";
   document.querySelectorAll("[data-operation]").forEach(button=>button.setAttribute("aria-pressed","false"));
   if(key!=="all"&&!CARGO_FILTER_GROUPS[key])return;
@@ -2755,12 +2756,28 @@ function searchActiveOrders() {
   return searchOrders(inTab ? "tab" : "all");
 }
 
-// Keep the single search button's scope tied to the field being edited.
-document.addEventListener("input", (event) => {
-  const id = event.target?.id;
-  if (!["searchInput", "tabSearchInput"].includes(id)) return;
-  document.getElementById(id === "searchInput" ? "tabSearchInput" : "searchInput").value = "";
+// Search only after typing pauses; ignore stale responses immediately.
+let autoSearchTimer=null;
+function cancelAutoSearch(){clearTimeout(autoSearchTimer);autoSearchTimer=null;}
+function queueAutoSearch(event){
+  const id=event.target?.id;
+  if(!["searchInput","tabSearchInput"].includes(id))return;
+  cancelAutoSearch();
+  document.getElementById(id==="searchInput"?"tabSearchInput":"searchInput").value="";
+  ++listRequest;
+  if(event.isComposing)return;
+  const value=event.target.value;
+  autoSearchTimer=setTimeout(()=>{
+    autoSearchTimer=null;
+    if(document.getElementById(id).value!==value)return;
+    searchOrders(id==="tabSearchInput"?"tab":"all");
+  },350);
+}
+document.addEventListener("input",queueAutoSearch);
+document.addEventListener("compositionstart",event=>{
+  if(["searchInput","tabSearchInput"].includes(event.target?.id)){cancelAutoSearch();++listRequest;}
 });
+document.addEventListener("compositionend",queueAutoSearch);
 
 async function searchOrders(scope = "all", append=false) {
   syncCargoTools();
@@ -2803,6 +2820,7 @@ async function searchOrders(scope = "all", append=false) {
 }
 
 function clearSearch(){
+  cancelAutoSearch();
   document.getElementById("searchInput").value="";
   document.getElementById("tabSearchInput").value="";
   loadOrders(true,false);
@@ -2821,6 +2839,7 @@ function updateListHeading(search, summary) {
 }
 
 function setTab(tab, operation="", forceCounts=false){
+  cancelAutoSearch();
   operationFilter=operation==="missing"&&tab==="bekleyen"?"missing":OPERATION_CARDS[operation]?.tab===tab ? operation : "";
   document.querySelectorAll("[data-operation]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.operation===operationFilter)));
   document.getElementById("searchInput").value = "";
@@ -2922,6 +2941,7 @@ document.addEventListener("keydown", (event) => {
   }
   if (["searchInput", "tabSearchInput"].includes(event.target?.id) && event.key === "Enter" && !event.isComposing) {
     event.preventDefault();
+    cancelAutoSearch();
     searchOrders(event.target.id === "tabSearchInput" ? "tab" : "all");
   }
 });

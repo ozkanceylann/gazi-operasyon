@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
+const app=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8');
+const a=app.indexOf('// Search only after typing pauses;'),b=app.indexOf('async function searchOrders(',a);
+const fields={searchInput:{id:'searchInput',value:''},tabSearchInput:{id:'tabSearchInput',value:''}};const handlers={},timers=new Map(),calls=[];let id=0;
+const c=vm.createContext({document:{getElementById:k=>fields[k],addEventListener:(event,fn)=>handlers[event]=fn},listRequest:0,searchOrders:scope=>calls.push(scope),setTimeout:(fn,delay)=>{assert.equal(delay,350);timers.set(++id,fn);return id},clearTimeout:id=>timers.delete(id)});vm.runInContext(app.slice(a,b),c);
+const input=(field,value,isComposing=false)=>{fields[field].value=value;handlers.input({target:fields[field],isComposing})};const flush=()=>{const all=[...timers.values()];timers.clear();all.forEach(fn=>fn())};
+input('searchInput','B');input('searchInput','Bü');input('searchInput','Bülent');assert.equal(calls.length,0);assert.equal(timers.size,1);flush();assert.deepEqual(calls,['all']);assert.equal(c.listRequest,3);
+input('tabSearchInput','10851');assert.equal(fields.searchInput.value,'');flush();assert.deepEqual(calls,['all','tab']);
+input('tabSearchInput','');flush();assert.deepEqual(calls,['all','tab','tab']);
+input('searchInput','x',true);assert.equal(timers.size,0);handlers.compositionend({target:fields.searchInput});flush();assert.equal(calls.at(-1),'all');
+input('searchInput','old');c.cancelAutoSearch();flush();assert.equal(calls.length,4);
+input('searchInput','stale');fields.searchInput.value='';flush();assert.equal(calls.length,4);
+const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');assert(html.indexOf('id="searchInput"')<html.indexOf('class="page-header"'));assert(!html.includes('onclick="searchActiveOrders()"'));assert.equal((html.match(/id="searchInput"/g)||[]).length,1);assert.equal((html.match(/id="tabSearchInput"/g)||[]).length,1);
+console.log('PASS: debounced input, correct scope, clearing, IME composition, navigation cancellation, stale query guard, searches first, no search button');

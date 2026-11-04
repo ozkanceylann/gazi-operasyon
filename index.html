@@ -78,6 +78,7 @@
     }
     @media(prefers-reduced-motion:reduce) { #bulkLabelTools .bulk-label-print { transition:none; } }
   </style>
+  <link rel="stylesheet" href="operations-layout.css?v=20261105-auto-search">
 </head>
 
 <body class="orders-page">
@@ -120,6 +121,16 @@
 
   <!-- ANA İÇERİK -->
   <main class="content-area">
+    <section class="top-bar search-slot order-search-top" aria-label="Sipariş arama">
+      <label class="order-search-field" for="searchInput">
+        <span class="order-search-label">Tüm siparişlerde ara</span>
+        <span class="order-search-control"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="searchInput" type="search" aria-label="Tüm siparişlerde ara" placeholder="İsim, sipariş no, telefon veya adres" autocomplete="off" enterkeyhint="search" /></span>
+      </label>
+      <label class="order-search-field" for="tabSearchInput">
+        <span class="order-search-label">Bu sekmede ara</span>
+        <span class="order-search-control"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M7 12h10M10 19h4"/></svg><input id="tabSearchInput" type="search" aria-label="Sekmede ara" placeholder="Açık listedeki siparişleri filtrele" autocomplete="off" enterkeyhint="search" /></span>
+      </label>
+    </section>
     <header class="page-header"><div><p class="page-eyebrow">SİPARİŞ YÖNETİMİ</p><h1 id="pageTitle">Bekleyen Siparişler</h1><p id="listSummary" role="status" aria-live="polite">Siparişler yükleniyor…</p></div><div class="page-header-actions"><button class="btn-refresh" type="button" onclick="clearSearch()" aria-label="Listeyi yenile" title="Listeyi yenile">↻ Yenile</button></div></header>
 
 
@@ -136,11 +147,6 @@
       <button id="scanLabelBtn" class="label-scan-launch" type="button" disabled aria-label="Kamerayla etiket okut">📷 Kamera Okut</button>
     </div>
 
-    <div class="top-bar search-slot">
-      <input id="searchInput" type="search" aria-label="Tüm siparişlerde ara" placeholder="Müşteri adı / Müşteri No / Sipariş No / Kargo Referans No / Telefon / Adres" />
-      <input id="tabSearchInput" type="search" aria-label="Sekmede ara" placeholder="Bulunduğunuz sekmede ara" />
-      <button type="button" class="btn-search" onclick="searchActiveOrders()">Ara</button>
-    </div>
 
     <section id="cargoTools" class="cargo-tools" hidden aria-label="Kargo işlemleri">
       <div class="cargo-tool-buttons">
@@ -262,7 +268,7 @@ document.getElementById("orderModal").addEventListener("click", function(e){
   <script type="module">
     try {
       await window.waitConfig();
-      await import("./app.js?v=20261105-single-print-click");
+      await import("./app.js?v=20261105-auto-search");
       document.getElementById("brandLogo").src = CONFIG.logo;
       const brandTitle = document.getElementById("brandTitle");
       const brandName = document.createElement("span");

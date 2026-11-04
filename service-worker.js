@@ -1,7 +1,7 @@
 // ================================
 // 🔥 VERSION = DEPLOY TARİHİ
 // ================================
-const VERSION = "20261105-single-print-click-162";
+const VERSION = "20261105-auto-search-163";
 const CACHE_NAME = `siparis-app-${VERSION}`;
 
 // Cache edilecek dosyalar
@@ -13,6 +13,7 @@ const ASSETS = [
   "/login.html",
   "/style.css",
   "/theme.css",
+  "/operations-layout.css",
   "/app.js",
   "/bulk-labels.js",
   "/cargo-pdf-text.js",
