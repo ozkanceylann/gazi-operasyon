@@ -2038,7 +2038,7 @@ async function saveEdit(){
   try { normalizedKg = CargoWeights.normalize(kargo_kg.value, kargo_adet.value); }
   catch(error) { return toast(error.message,6000); }
   const updated = {
-    ad_soyad: ad_soyad.value, siparis_tel: siparis_tel.value, musteri_tel: musteri_tel.value,
+    ad_soyad: ad_soyad.value, siparis_tel: siparis_tel.value, siparis_alan: siparis_tel.value, musteri_tel: musteri_tel.value,
     adres: adres.value, sehir: sehirName, ilce: ilceName,
     sehir_kodu: sehirKoduVal, ilce_kodu: ilceKoduVal,
     kargo_adet: kargo_adet.value, kargo_kg: normalizedKg,
