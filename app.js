@@ -2281,7 +2281,7 @@ async function printAllUnprintedLabels(){
   if(!w)return toast('Toplu etiket için açılır pencerelere izin verin.');
   const job={w,preparing:true,pending:[]};bulkLabelJob=job;syncBulkLabelButton();showBulkLabelErrors([]);
   const release=()=>{clearInterval(job.timer);if(bulkLabelJob===job)bulkLabelJob=null;syncBulkLabelButton();};
-  job.timer=setInterval(()=>{if(w.closed&&!job.preparing&&!job.saving){bulkLabelStatus('Pencere kapatıldı. Onaylanmayan sayaçlar değiştirilmedi.');release();}},1000);
+  job.timer=setInterval(()=>{if(w.closed&&!job.preparing&&!job.saving){bulkLabelStatus('Pencere kapatıldı. Yazdır’a basılmayan etiketlerin sayaçları değiştirilmedi.');release();}},1000);
   w.document.body.textContent='Yazdırılmamış siparişler bulunuyor…';
   bulkLabelStatus('Tüm yazdırılmamış siparişler bulunuyor…');
   try{
@@ -2294,32 +2294,42 @@ async function printAllUnprintedLabels(){
     }});
     if(!result.orders.length)throw Error('Etiket hazırlanamadı. '+result.failed.map(e=>`#${e.id}: ${e.message}`).join(' · '));
     let binary='';for(const byte of result.bytes)binary+=String.fromCharCode(byte);
-    await openCargoPdf(w,btoa(binary),{ad_soyad:'Toplu Etiketler',siparis_no:new Date().toISOString().slice(0,10),kargo_adet:result.pageCount},{trackPrint:false});
+    const preview=await openCargoPdf(w,btoa(binary),{ad_soyad:'Toplu Etiketler',siparis_no:new Date().toISOString().slice(0,10),kargo_adet:result.pageCount},{trackPrint:false});
     job.pending=result.orders;
     const panel=w.document.createElement('section');
     panel.style.cssText='padding:10px;background:#fff4d6;font:14px system-ui;color:#263c2e';
-    const info=w.document.createElement('p');info.textContent=`${result.orders.length} sipariş · ${result.pageCount} etiket hazır. Önce Yazdır’a basın; bütün etiketler basılınca aşağıdan onaylayın. Pencereyi kapatmak sayaçları değiştirmez.`;
-    const confirm=w.document.createElement('button');confirm.type='button';confirm.textContent='Yazdırma tamamlandı';confirm.style.cssText='padding:12px 18px;background:#20543b;color:white;border:0;border-radius:8px;cursor:pointer';
+    const info=w.document.createElement('p');info.textContent=`${result.orders.length} sipariş · ${result.pageCount} etiket hazır. Yazdır’a bastığınızda yazdırma penceresi açılır ve sayaçlar otomatik güncellenir.`;
+    const retry=w.document.createElement('button');retry.type='button';retry.textContent='Sayaç kaydını tekrar dene';retry.hidden=true;
     const status=w.document.createElement('p');status.setAttribute('role','status');
-    panel.append(info,confirm,status);
+    panel.append(info,retry,status);
     if(result.failed.length){const errors=w.document.createElement('details'),summary=w.document.createElement('summary'),list=w.document.createElement('ul');summary.textContent=`${result.failed.length} sipariş PDF’ye eklenemedi`;
       for(const error of result.failed){const li=w.document.createElement('li');li.textContent=`#${error.id}: ${error.message}`;list.append(li);}errors.append(summary,list);panel.append(errors);}
     w.document.body.insertBefore(panel,w.document.querySelector('iframe'));
     w.document.body.style.cssText='margin:0;height:100dvh;display:flex;flex-direction:column';
     panel.style.flex='0 0 auto';panel.style.maxHeight='35vh';panel.style.overflow='auto';
     const frame=w.document.querySelector('iframe');frame.style.height='auto';frame.style.flex='1';frame.style.minHeight='200px';
-    confirm.onclick=async()=>{
+    const saveCounters=async()=>{
       if(job.saving||!job.pending.length)return;
-      job.saving=true;confirm.disabled=true;status.textContent='Yazdırma sayaçları kaydediliyor…';
+      job.saving=true;preview.print.disabled=true;retry.disabled=true;
+      status.textContent='Yazdırma sayaçları kaydediliyor…';
       try{
         const saved=await confirmBulkLabels(job.pending,saveBulkLabelCounter);job.pending=saved.remaining;
-        status.textContent=saved.errors.length?saved.errors.map(e=>`#${e.id}: ${e.message}`).join(' · '):'Yazdırma tamamlandı. Sayaçlar güncellendi.';
-        confirm.textContent=saved.errors.length?'Kaydedilemeyen sayaçları tekrar dene':'Kaydedildi';
-        if(!saved.errors.length){bulkLabelStatus(`${result.orders.length} siparişin yazdırılması onaylandı.`);release();}
+        retry.hidden=!saved.errors.length;
+        status.textContent=saved.errors.length?saved.errors.map(e=>`#${e.id}: ${e.message}`).join(' · '):'Yazdırma sayaçları güncellendi.';
+        if(!saved.errors.length){bulkLabelStatus(`${result.orders.length} siparişin yazdırma sayacı güncellendi.`);release();}
         await loadOrders(true);
-      }finally{job.saving=false;confirm.disabled=!job.pending.length;}
+      }finally{job.saving=false;preview.print.disabled=false;retry.disabled=false;}
     };
-    bulkLabelStatus(`${result.orders.length} sipariş · ${result.pageCount} etiket hazır${result.failed.length?` · ${result.failed.length} hata`:''}. PDF penceresinde yazdırma onayı bekleniyor.`);
+    retry.onclick=saveCounters;
+    const openPrintDialog=preview.print.onclick;
+    preview.print.onclick=async()=>{
+      if(job.saving)return;
+      // Open synchronously from the click, preserving browser print permission.
+      // Cancelling the native print dialog still counts as opening print.
+      try{openPrintDialog();}catch(error){status.textContent='Yazdırma penceresi açılamadı: '+(error.message||'');return;}
+      await saveCounters();
+    };
+    bulkLabelStatus(`${result.orders.length} sipariş · ${result.pageCount} etiket hazır${result.failed.length?` · ${result.failed.length} hata`:''}. PDF penceresindeki Yazdır butonunu kullanın.`);
   }catch(error){
     bulkLabelStatus(error.message||'Toplu etiket hazırlanamadı.');
     if(!w.closed)w.document.body.textContent=error.message||'Toplu etiket hazırlanamadı.';
@@ -2376,6 +2386,7 @@ async function openCargoPdf(w, base64, order, {trackPrint=true}={}){
   print.onclick=()=>{frame.contentWindow.focus();frame.contentWindow.print();};
   w.document.addEventListener("keydown",event=>{if(event.key==="Escape"){event.preventDefault();w.close();}});
   if(trackPrint)await recordCargoLabelPrint(order);
+  return {print,frame};
 }
 
 async function shipPreparedFromList(siparisNo, button){
