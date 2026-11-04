@@ -2383,9 +2383,17 @@ async function openCargoPdf(w, base64, order, {trackPrint=true}={}){
   frame.title=filename;frame.src=url+"#view=FitH&toolbar=0";
   frame.style.cssText=`display:block;border:0;width:100%;height:calc(100vh - 48px)`;
   w.document.body.appendChild(frame);
-  print.onclick=()=>{frame.contentWindow.focus();frame.contentWindow.print();};
+  const openPrintDialog=()=>{frame.contentWindow.focus();frame.contentWindow.print();};
+  print.onclick=trackPrint?async()=>{
+    if(print.disabled)return;
+    print.disabled=true;
+    try{
+      openPrintDialog();
+      await recordCargoLabelPrint(order);
+    }catch(error){toast("Yazdırma penceresi açılamadı. "+(error.message||""),8000);}
+    finally{print.disabled=false;}
+  }:openPrintDialog;
   w.document.addEventListener("keydown",event=>{if(event.key==="Escape"){event.preventDefault();w.close();}});
-  if(trackPrint)await recordCargoLabelPrint(order);
   return {print,frame};
 }
 
@@ -2490,12 +2498,17 @@ async function recordCargoLabelPrint(order){
       selectedOrder.etiket_yazdirma_sayisi=data;
       updateCargoLabelButton(document.getElementById("btnBarcode"),selectedOrder);
     }
+    document.querySelectorAll('[data-order-id]').forEach(row=>{
+      if(Number(row.dataset.orderId)===Number(order.siparis_no)){
+        row.querySelectorAll('.btn-cargo-label').forEach(button=>updateCargoLabelButton(button,order));
+      }
+    });
     document.querySelectorAll('[data-label-print-count]').forEach(el=>{
       if(Number(el.dataset.labelPrintCount)===Number(order.siparis_no))el.textContent=`${data} kez yazdırma açıldı`;
     });
   }catch(error){
     console.error("Etiket yazdırma sayacı:",error);
-    toast("Etiket açıldı, ancak yazdırma sayısı kaydedilemedi. "+(error.message||""),8000);
+    toast("Yazdırma açıldı, ancak yazdırma sayısı kaydedilemedi. "+(error.message||""),8000);
   }
 }
 
