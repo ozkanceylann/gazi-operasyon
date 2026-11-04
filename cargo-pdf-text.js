@@ -58,6 +58,12 @@
     draw();page.pushOperators(popGraphicsState());
    }
    function text(line,u,v,size){page.drawText(line,{x:(110-v)*DOT,y:height-(150+u)*DOT,size,font,rotate:degrees(-90),color:rgb(0,0,0)});}
+   // Separate order number on the free right-hand part of the carrier caption row.
+   // Keep SETNO / IRS / REF and the carrier barcodes untouched.
+   const heading='Sipariş: '+order.siparis_no;
+   let headingSize=14*DOT;
+   while(font.widthOfTextAtSize(heading,headingSize)>166*DOT)headingSize*=0.95;
+   field(470,-28,170,20,()=>text(heading,472,-26+font.heightAtSize(headingSize,{descender:false})/DOT,headingSize));
    const productWidth=(amount?540:640)-4;
    {
     // All orders: up to four products in one column; five or more in two.
@@ -68,13 +74,12 @@
     for(let i=0;i<30;i++){
      const size=(low+high)/2,lineHeight=size*1.25;
      const rows=columns.map(list=>list.flatMap(item=>wrap('• '+item,font,size,columnWidth*DOT)));
-     if((1+Math.max(...rows.map(r=>r.length)))*lineHeight<=86*DOT&&font.widthOfTextAtSize('Sipariş: '+order.siparis_no,size)<=productWidth*DOT){best={size,lineHeight,rows};low=size;}else high=size;
+     if(Math.max(...rows.map(r=>r.length))*lineHeight<=86*DOT){best={size,lineHeight,rows};low=size;}else high=size;
     }
     if(!best)throw Error('Ürün listesi etiket alanına sığmadı.');
     field(0,0,amount?540:640,90,()=>{
      const baseline=2+font.heightAtSize(best.size,{descender:false})/DOT;
-     text('Sipariş: '+order.siparis_no,2,baseline,best.size);
-     best.rows.forEach((rows,column)=>rows.forEach((line,i)=>text(line,2+column*(columnWidth+gap),baseline+(i+1)*best.lineHeight/DOT,best.size)));
+     best.rows.forEach((rows,column)=>rows.forEach((line,i)=>text(line,2+column*(columnWidth+gap),baseline+i*best.lineHeight/DOT,best.size)));
     });
    }
    if(amount){
