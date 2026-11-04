@@ -352,7 +352,6 @@ async function loadCargoLabelQueue(start, end){
 }
 
 async function loadOrders(reset=false, forceCounts=true, lastPage=false){
-  syncBulkLabelButton();
   if(reset)void refreshOperationCounts(forceCounts);
   if(document.getElementById("tabSearchInput")?.value.trim()) return searchOrders("tab",!reset);
   if(document.getElementById("searchInput")?.value.trim()) return searchOrders("all",!reset);
@@ -1193,6 +1192,7 @@ function isLiveShipment(order){
   catch { return false; }
 }
 function syncCargoTools(){
+  syncBulkLabelButton();
   const tools=document.getElementById("cargoTools");
   if(tools) tools.hidden=!["kargolandi","tamamlandi","sorunlu","iade"].includes(currentTab);
   document.querySelectorAll("[data-cargo-filter]").forEach(button=>{
