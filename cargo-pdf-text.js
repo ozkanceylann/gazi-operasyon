@@ -60,10 +60,16 @@
    function text(line,u,v,size){page.drawText(line,{x:(110-v)*DOT,y:height-(150+u)*DOT,size,font,rotate:degrees(-90),color:rgb(0,0,0)});}
    // Separate order number on the free space between IRS NO and REF on the carrier caption row.
    // Keep SETNO / IRS / REF and the carrier barcodes untouched.
-   const heading='Sipariş: '+order.siparis_no;
-   let headingSize=14*DOT;
-   while(font.widthOfTextAtSize(heading,headingSize)>166*DOT)headingSize*=0.95;
-   field(70,-28,170,20,()=>text(heading,72,-26+font.heightAtSize(headingSize,{descender:false})/DOT,headingSize));
+   const heading='SİPARİŞ: '+order.siparis_no;
+   // Carrier captions use narrow bold capitals, 13-dot cap height and baseline x=130.
+   const headingSqueeze=62;
+   let headingSize=18*DOT;
+   while(font.widthOfTextAtSize(heading,headingSize)*headingSqueeze/100>166*DOT)headingSize*=0.95;
+   field(70,-38,170,26,()=>{
+    page.pushOperators(pushGraphicsState(),PDFLib.setCharacterSqueeze(headingSqueeze));
+    text(heading,72,-20,headingSize);
+    page.pushOperators(popGraphicsState());
+   });
    const productWidth=(amount?540:640)-4;
    {
     // All orders: up to four products in one column; five or more in two.
