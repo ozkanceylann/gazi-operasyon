@@ -88,6 +88,14 @@
      best.rows.forEach((rows,column)=>rows.forEach((line,i)=>text(line,2+column*(columnWidth+gap),baseline+i*best.lineHeight/DOT,best.size)));
     });
    }
+   const note=String(order.notlar??'').replace(/\\n|\r?\n/g,' ').replace(/\s+/g,' ').trim().normalize('NFC');
+   if(note){
+    // Full-width bottom strip below the small carrier barcode, separate from products.
+    const line='Not: '+note;
+    const noteWidth=756*DOT;
+    const size=Math.min(12*DOT,noteWidth/font.widthOfTextAtSize(line,1));
+    field(-120,90,760,18,()=>text(line,-118,92+font.heightAtSize(size,{descender:false})/DOT,size));
+   }
    if(amount){
     let size=24*DOT;
     while(font.widthOfTextAtSize(amount,size)>80*DOT)size*=0.95;
