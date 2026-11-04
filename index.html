@@ -49,6 +49,32 @@
 <link rel="stylesheet" href="order-split.css?v=20261022-split-group-104">
 <link rel="stylesheet" href="viewport-lock.css?v=20261025-fixed-screen-1">
 <script src="viewport-lock.js?v=20261025-fixed-screen-1"></script>
+
+  <style>
+    #bulkLabelTools { width:100%; min-width:0; margin:14px 0 12px; }
+    #bulkLabelTools[hidden] { display:none !important; }
+    #bulkLabelPrintBtn {
+      display:flex; align-items:center; justify-content:center; gap:12px;
+      width:100%; max-width:100%; min-height:54px; box-sizing:border-box;
+      padding:14px 20px; border:1px solid rgba(255,255,255,.68); border-radius:14px;
+      color:#263440; background:linear-gradient(135deg,rgba(248,250,252,.92),rgba(185,198,210,.72) 52%,rgba(232,237,243,.88));
+      -webkit-backdrop-filter:blur(16px) saturate(125%); backdrop-filter:blur(16px) saturate(125%);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.85),inset 0 -1px 0 rgba(112,127,145,.14),0 5px 16px rgba(0,0,0,.12);
+      line-height:1.4; font-family:inherit; font-size:14px; font-weight:600;
+      text-align:center; cursor:pointer; transition:background .15s,box-shadow .15s;
+    }
+    #bulkLabelPrintBtn svg { width:22px; height:22px; flex:0 0 22px; }
+    #bulkLabelPrintBtn span { min-width:0; overflow-wrap:anywhere; }
+    #bulkLabelPrintBtn:hover:not(:disabled) { background:linear-gradient(135deg,#fff,rgba(207,218,229,.9),rgba(244,247,250,.96)); box-shadow:inset 0 1px 0 #fff,0 6px 20px rgba(0,0,0,.16); }
+    #bulkLabelPrintBtn:focus-visible { outline:3px solid #93b9da; outline-offset:3px; }
+    #bulkLabelPrintBtn:disabled { opacity:.62; cursor:wait; }
+    #bulkLabelStatus { margin:8px 4px 0; font-size:13px; line-height:1.5; overflow-wrap:anywhere; }
+    #bulkLabelStatus:empty { display:none; }
+    @media(max-width:600px) {
+      #bulkLabelPrintBtn { min-height:52px; padding:13px 12px; gap:9px; font-size:13px; border-radius:12px; }
+    }
+    @media(prefers-reduced-motion:reduce) { #bulkLabelPrintBtn { transition:none; } }
+  </style>
 </head>
 
 <body class="orders-page">
@@ -103,11 +129,6 @@
       <button type="button" class="operation-card operation-card--receipt" data-operation="receipt" aria-pressed="false" onclick="openOperationQueue('receipt')"><span>Dekont bekleyen</span><div class="handover-count"><strong data-operation-count="receipt">…</strong><small data-operation-parcels="receipt">… parça</small></div><small>Dekont eksik / kontrol gerekli</small></button>
     </section>
 
-    <section id="bulkLabelTools" hidden style="margin:12px 0">
-      <button id="bulkLabelPrintBtn" class="btn-primary" type="button" onclick="printAllUnprintedLabels()">Yazdırılmamışların tamamını yazdır</button>
-      <p id="bulkLabelStatus" role="status" aria-live="polite"></p>
-    </section>
-
     <div class="order-quick-actions">
       <button id="scanLabelBtn" class="label-scan-launch" type="button" disabled aria-label="Kamerayla etiket okut">📷 Kamera Okut</button>
     </div>
@@ -126,6 +147,11 @@
       <p id="cargoSyncStatus" role="status" aria-live="polite">Canlı DHL gönderilerinin durumları ve hareketleri güncellenir.</p>
       <div class="cargo-legend" role="group" aria-label="Kargo sürecine göre filtrele"><button type="button" class="cargo-status cargo-status--all" data-cargo-filter="all" aria-pressed="true" onclick="filterCargo('all')">Tümü</button><button type="button" class="cargo-status cargo-status--created" data-cargo-filter="created" aria-pressed="false" onclick="filterCargo('created')">Hazırlandı</button><button type="button" class="cargo-status cargo-status--transit" data-cargo-filter="transit" aria-pressed="false" onclick="filterCargo('transit')">Yolda</button><button type="button" class="cargo-status cargo-status--delivery" data-cargo-filter="delivery" aria-pressed="false" onclick="filterCargo('delivery')">Dağıtımda</button><button type="button" class="cargo-status cargo-status--delivered" data-cargo-filter="delivered" aria-pressed="false" onclick="filterCargo('delivered')">Teslim edildi</button><button type="button" class="cargo-status cargo-status--problem" data-cargo-filter="problem" aria-pressed="false" onclick="filterCargo('problem')">Sorun</button><button type="button" class="cargo-status cargo-status--return" data-cargo-filter="return" aria-pressed="false" onclick="filterCargo('return')">Geri Geliyor</button></div>
     </section>
+    <section id="bulkLabelTools" hidden>
+      <button id="bulkLabelPrintBtn" class="bulk-label-print" type="button" onclick="printAllUnprintedLabels()"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 8V3h10v5M7 17H4V9h16v8h-3M7 14h10v7H7z"/><path d="M16 11h1"/></svg><span>Yazdırılmamışların tamamını yazdır</span></button>
+      <p id="bulkLabelStatus" role="status" aria-live="polite"></p>
+    </section>
+
     <div class="table-wrapper" tabindex="0" aria-label="Sipariş listesi">
       <table class="orders-table">
         <thead>
