@@ -1,7 +1,7 @@
 // ================================
 // 🔥 VERSION = DEPLOY TARİHİ
 // ================================
-const VERSION = "20261105-selectable-label-151";
+const VERSION = "20261105-columns-10769-152";
 const CACHE_NAME = `siparis-app-${VERSION}`;
 
 // Cache edilecek dosyalar
@@ -101,7 +101,7 @@ self.addEventListener("fetch", (event) => {
   }
   if (url.origin === self.location.origin &&
       (/\/printetiket(?:-v2)?\.html$/.test(url.pathname) ||
-       url.pathname.endsWith("/app.js"))) {
+       url.pathname.endsWith("/app.js") || url.pathname.endsWith("/cargo-pdf-text.js"))) {
     event.respondWith(fetch(event.request, { cache: "no-store" }));
     return;
   }
