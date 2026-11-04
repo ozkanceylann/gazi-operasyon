@@ -352,6 +352,7 @@ async function loadCargoLabelQueue(start, end){
 }
 
 async function loadOrders(reset=false, forceCounts=true, lastPage=false){
+  syncBulkLabelButton();
   if(reset)void refreshOperationCounts(forceCounts);
   if(document.getElementById("tabSearchInput")?.value.trim()) return searchOrders("tab",!reset);
   if(document.getElementById("searchInput")?.value.trim()) return searchOrders("all",!reset);
@@ -2171,6 +2172,116 @@ async function directShipFromDetail(button){
   finally{button.disabled=false;}
 }
 
+let bulkLabelJob=null;
+function syncBulkLabelButton(){
+  const box=document.getElementById('bulkLabelTools');
+  if(!box)return;
+  box.hidden=operationFilter!=='label'&&!bulkLabelJob;
+  document.getElementById('bulkLabelPrintBtn').disabled=!!bulkLabelJob;
+}
+function bulkLabelStatus(message){document.getElementById('bulkLabelStatus').textContent=message;}
+async function bulkLabelIds(){
+  const ids=[];let after=0;
+  for(;;){
+    const {data,error}=await db.from(LIST_TABLE).select('siparis_no')
+      .or(cargoStateFilter('created')).or('etiket_yazdirma_sayisi.is.null,etiket_yazdirma_sayisi.eq.0')
+      .gt('siparis_no',after).order('siparis_no',{ascending:true}).limit(200);
+    if(error)throw error;
+    if(!data?.length)break;
+    ids.push(...data.map(o=>Number(o.siparis_no)));after=Number(data[data.length-1].siparis_no);
+  }
+  return ids;
+}
+async function fetchBulkLabel(id){
+  if(busy.kargola.has(id)||busy.barkod.has(id))throw Error('Siparişin başka kargo işlemi sürüyor.');
+  busy.kargola.add(id);busy.barkod.add(id);
+  try{
+    const read=async()=>{
+      const {data,error}=await db.from(TABLE).select('*').eq('siparis_no',id).single();
+      if(error)throw error;
+      if(Number(data.etiket_yazdirma_sayisi||0)!==0)throw Error('Bu sipariş zaten yazdırılmış.');
+      if(!canPrintCargoLabel(data)||cargoEnvironment(data)==='test')throw Error('Gönderi artık etiket yazdırmaya uygun değil.');
+      return data;
+    };
+    let order=await read();
+    if(!hasCargoLabel(order)){
+      if(!needsCargoLabelRetry(order))throw Error('Etiket oluşturulamıyor.');
+      await cargoRequest(WH_BARKOD,{siparis_no:String(id),operation:'create'});
+      order=await read();
+      if(!hasCargoLabel(order))throw Error('Etiket kaydı doğrulanamadı.');
+    }
+    const result=await cargoRequest(WH_BARKOD,{siparis_no:String(id),operation:'print'});
+    // Re-read in case a single-label print or shipment update happened during preparation.
+    const latest=await read();
+    if(String(latest.orderinvoiceid)!==String(order.orderinvoiceid))throw Error('Gönderi kaydı değişti.');
+    return {order:latest,base64:result.pdf_base64};
+  }finally{busy.kargola.delete(id);busy.barkod.delete(id);}
+}
+async function saveBulkLabelCounter(order){
+  // Set to one only if still unprinted and still the same shipment; never overwrite a newer count.
+  const {data,error}=await db.from(TABLE).update({etiket_yazdirma_sayisi:1})
+    .eq('siparis_no',order.siparis_no).eq('orderinvoiceid',order.orderinvoiceid)
+    .or('etiket_yazdirma_sayisi.is.null,etiket_yazdirma_sayisi.eq.0').select('siparis_no');
+  if(error)throw error;
+  if(!data?.length){
+    const {data:current,error:readError}=await db.from(TABLE).select('orderinvoiceid,etiket_yazdirma_sayisi').eq('siparis_no',order.siparis_no).single();
+    if(readError)throw readError;
+    if(String(current.orderinvoiceid)!==String(order.orderinvoiceid)||Number(current.etiket_yazdirma_sayisi)<1)throw Error('Gönderi değişti; sayaç güncellenmedi.');
+  }
+}
+async function printAllUnprintedLabels(){
+  if(bulkLabelJob||operationFilter!=='label')return;
+  const w=window.open('','_blank');
+  if(!w)return toast('Toplu etiket için açılır pencerelere izin verin.');
+  const job={w,preparing:true,pending:[]};bulkLabelJob=job;syncBulkLabelButton();
+  const release=()=>{clearInterval(job.timer);if(bulkLabelJob===job)bulkLabelJob=null;syncBulkLabelButton();};
+  job.timer=setInterval(()=>{if(w.closed&&!job.preparing&&!job.saving){bulkLabelStatus('Pencere kapatıldı. Onaylanmayan sayaçlar değiştirilmedi.');release();}},1000);
+  w.document.body.textContent='Yazdırılmamış siparişler bulunuyor…';
+  bulkLabelStatus('Tüm yazdırılmamış siparişler bulunuyor…');
+  try{
+    const {prepareBulkLabels,confirmBulkLabels}=await import('./bulk-labels.js?v=20261105-bulk-labels');
+    const ids=await bulkLabelIds();
+    if(!ids.length)throw Error('Yazdırılmamış uygun sipariş bulunamadı.');
+    const result=await prepareBulkLabels(ids,{PDFLib:window.PDFLib,fetchLabel:fetchBulkLabel,decorate:(bytes,order)=>CargoPdfText.apply(bytes,order),isCancelled:()=>w.closed,onProgress:(done,total)=>{
+      const message=`${done} / ${total} siparişin etiketi hazırlanıyor…`;
+      bulkLabelStatus(message);if(!w.closed)w.document.body.textContent=message;
+    }});
+    if(!result.orders.length)throw Error('Etiket hazırlanamadı. '+result.failed.map(e=>`#${e.id}: ${e.message}`).join(' · '));
+    let binary='';for(const byte of result.bytes)binary+=String.fromCharCode(byte);
+    await openCargoPdf(w,btoa(binary),{ad_soyad:'Toplu Etiketler',siparis_no:new Date().toISOString().slice(0,10),kargo_adet:result.pageCount},{trackPrint:false});
+    job.pending=result.orders;
+    const panel=w.document.createElement('section');
+    panel.style.cssText='padding:10px;background:#fff4d6;font:14px system-ui;color:#263c2e';
+    const info=w.document.createElement('p');info.textContent=`${result.orders.length} sipariş · ${result.pageCount} etiket hazır. Önce Yazdır’a basın; bütün etiketler basılınca aşağıdan onaylayın. Pencereyi kapatmak sayaçları değiştirmez.`;
+    const confirm=w.document.createElement('button');confirm.type='button';confirm.textContent='Yazdırma tamamlandı';confirm.style.cssText='padding:12px 18px;background:#20543b;color:white;border:0;border-radius:8px;cursor:pointer';
+    const status=w.document.createElement('p');status.setAttribute('role','status');
+    panel.append(info,confirm,status);
+    if(result.failed.length){const errors=w.document.createElement('details'),summary=w.document.createElement('summary'),list=w.document.createElement('ul');summary.textContent=`${result.failed.length} sipariş PDF’ye eklenemedi`;
+      for(const error of result.failed){const li=w.document.createElement('li');li.textContent=`#${error.id}: ${error.message}`;list.append(li);}errors.append(summary,list);panel.append(errors);}
+    w.document.body.insertBefore(panel,w.document.querySelector('iframe'));
+    w.document.body.style.cssText='margin:0;height:100dvh;display:flex;flex-direction:column';
+    panel.style.flex='0 0 auto';panel.style.maxHeight='35vh';panel.style.overflow='auto';
+    const frame=w.document.querySelector('iframe');frame.style.height='auto';frame.style.flex='1';frame.style.minHeight='200px';
+    confirm.onclick=async()=>{
+      if(job.saving||!job.pending.length)return;
+      job.saving=true;confirm.disabled=true;status.textContent='Yazdırma sayaçları kaydediliyor…';
+      try{
+        const saved=await confirmBulkLabels(job.pending,saveBulkLabelCounter);job.pending=saved.remaining;
+        status.textContent=saved.errors.length?saved.errors.map(e=>`#${e.id}: ${e.message}`).join(' · '):'Yazdırma tamamlandı. Sayaçlar güncellendi.';
+        confirm.textContent=saved.errors.length?'Kaydedilemeyen sayaçları tekrar dene':'Kaydedildi';
+        if(!saved.errors.length){bulkLabelStatus(`${result.orders.length} siparişin yazdırılması onaylandı.`);release();}
+        await loadOrders(true);
+      }finally{job.saving=false;confirm.disabled=!job.pending.length;}
+    };
+    bulkLabelStatus(`${result.orders.length} sipariş · ${result.pageCount} etiket hazır${result.failed.length?` · ${result.failed.length} hata`:''}. PDF penceresinde yazdırma onayı bekleniyor.`);
+  }catch(error){
+    bulkLabelStatus(error.message||'Toplu etiket hazırlanamadı.');
+    if(!w.closed)w.document.body.textContent=error.message||'Toplu etiket hazırlanamadı.';
+    release();
+  }finally{job.preparing=false;}
+}
+window.printAllUnprintedLabels=printAllUnprintedLabels;
+
 function cargoPdfFilename(order) {
   const clean=value=>String(value??"").normalize("NFC")
     .replace(/[<>:"/\\|?*\x00-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069]/g," ")
@@ -2871,3 +2982,4 @@ document.addEventListener("click", event => {
   dialog.showModal();
   close.focus();
 }, true);
+

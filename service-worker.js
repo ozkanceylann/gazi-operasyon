@@ -1,7 +1,7 @@
 // ================================
 // 🔥 VERSION = DEPLOY TARİHİ
 // ================================
-const VERSION = "20261105-label-order-note-157";
+const VERSION = "20261105-bulk-labels-158";
 const CACHE_NAME = `siparis-app-${VERSION}`;
 
 // Cache edilecek dosyalar
@@ -14,6 +14,7 @@ const ASSETS = [
   "/style.css",
   "/theme.css",
   "/app.js",
+  "/bulk-labels.js",
   "/cargo-pdf-text.js",
   "/assets/pdf-lib.min.js",
   "/assets/fontkit.min.js",
@@ -101,7 +102,7 @@ self.addEventListener("fetch", (event) => {
   }
   if (url.origin === self.location.origin &&
       (/\/printetiket(?:-v2)?\.html$/.test(url.pathname) ||
-       url.pathname.endsWith("/app.js") || url.pathname.endsWith("/cargo-pdf-text.js"))) {
+       url.pathname.endsWith("/app.js") || url.pathname.endsWith("/bulk-labels.js") || url.pathname.endsWith("/cargo-pdf-text.js"))) {
     event.respondWith(fetch(event.request, { cache: "no-store" }));
     return;
   }
@@ -118,6 +119,7 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(event.request))
   );
 });
+
 
 
 

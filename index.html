@@ -103,6 +103,11 @@
       <button type="button" class="operation-card operation-card--receipt" data-operation="receipt" aria-pressed="false" onclick="openOperationQueue('receipt')"><span>Dekont bekleyen</span><div class="handover-count"><strong data-operation-count="receipt">…</strong><small data-operation-parcels="receipt">… parça</small></div><small>Dekont eksik / kontrol gerekli</small></button>
     </section>
 
+    <section id="bulkLabelTools" hidden style="margin:12px 0">
+      <button id="bulkLabelPrintBtn" class="btn-primary" type="button" onclick="printAllUnprintedLabels()">Yazdırılmamışların tamamını yazdır</button>
+      <p id="bulkLabelStatus" role="status" aria-live="polite"></p>
+    </section>
+
     <div class="order-quick-actions">
       <button id="scanLabelBtn" class="label-scan-launch" type="button" disabled aria-label="Kamerayla etiket okut">📷 Kamera Okut</button>
     </div>
@@ -224,7 +229,7 @@ document.getElementById("orderModal").addEventListener("click", function(e){
   <script type="module">
     try {
       await window.waitConfig();
-      await import("./app.js?v=20261105-selectable-label");
+      await import("./app.js?v=20261105-bulk-labels");
       document.getElementById("brandLogo").src = CONFIG.logo;
       const brandTitle = document.getElementById("brandTitle");
       const brandName = document.createElement("span");
@@ -265,6 +270,7 @@ document.getElementById("orderModal").addEventListener("click", function(e){
 
 </body>
 </html>
+
 
 
 
