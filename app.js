@@ -2178,14 +2178,19 @@ function syncBulkLabelButton(){
   if(!box)return;
   box.hidden=operationFilter!=='label'&&!bulkLabelJob;
   document.getElementById('bulkLabelPrintBtn').disabled=!!bulkLabelJob;
+  const createButton=document.getElementById('bulkLabelCreateBtn');
+  if(createButton)createButton.disabled=!!bulkLabelJob;
 }
 function bulkLabelStatus(message){document.getElementById('bulkLabelStatus').textContent=message;}
-async function bulkLabelIds(){
+async function bulkLabelIds(mode='print'){
   const ids=[];let after=0;
   for(;;){
-    const {data,error}=await db.from(LIST_TABLE).select('siparis_no')
-      .or(cargoStateFilter('created')).or('etiket_yazdirma_sayisi.is.null,etiket_yazdirma_sayisi.eq.0')
-      .gt('siparis_no',after).order('siparis_no',{ascending:true}).limit(200);
+    let query=db.from(LIST_TABLE).select('siparis_no').or(cargoStateFilter('created'));
+    query=mode==='create'
+      ? query.or('and(or(kargo_zpl.is.null,kargo_zpl.eq.),or(zpl_base64.is.null,zpl_base64.not.like.JVBER%))')
+      : query.or('etiket_yazdirma_sayisi.is.null,etiket_yazdirma_sayisi.eq.0')
+        .or('and(kargo_zpl.not.is.null,kargo_zpl.neq.),zpl_base64.like.JVBER%');
+    const {data,error}=await query.gt('siparis_no',after).order('siparis_no',{ascending:true}).limit(200);
     if(error)throw error;
     if(!data?.length)break;
     ids.push(...data.map(o=>Number(o.siparis_no)));after=Number(data[data.length-1].siparis_no);
@@ -2203,13 +2208,8 @@ async function fetchBulkLabel(id){
       if(!canPrintCargoLabel(data)||cargoEnvironment(data)==='test')throw Error('Gönderi artık etiket yazdırmaya uygun değil.');
       return data;
     };
-    let order=await read();
-    if(!hasCargoLabel(order)){
-      if(!needsCargoLabelRetry(order))throw Error('Etiket oluşturulamıyor.');
-      await cargoRequest(WH_BARKOD,{siparis_no:String(id),operation:'create'});
-      order=await read();
-      if(!hasCargoLabel(order))throw Error('Etiket kaydı doğrulanamadı.');
-    }
+    const order=await read();
+    if(!hasCargoLabel(order))throw Error('Etiket henüz oluşmamış. Önce Tamamına etiket oluştur butonunu kullanın.');
     const result=await cargoRequest(WH_BARKOD,{siparis_no:String(id),operation:'print'});
     // Re-read in case a single-label print or shipment update happened during preparation.
     const latest=await read();
@@ -2229,11 +2229,57 @@ async function saveBulkLabelCounter(order){
     if(String(current.orderinvoiceid)!==String(order.orderinvoiceid)||Number(current.etiket_yazdirma_sayisi)<1)throw Error('Gönderi değişti; sayaç güncellenmedi.');
   }
 }
+
+function showBulkLabelErrors(errors){
+  const box=document.getElementById('bulkLabelErrors');
+  box.replaceChildren();box.hidden=!errors.length;
+  if(!errors.length)return;
+  const summary=document.createElement('summary');summary.textContent=errors.length+' siparişte işlem tamamlanamadı';
+  const list=document.createElement('ul');
+  for(const error of errors){const li=document.createElement('li');li.textContent='#'+error.id+': '+error.message;list.append(li);}
+  box.append(summary,list);
+}
+async function createBulkLabel(id){
+  if(busy.kargola.has(id)||busy.barkod.has(id))throw Error('Siparişin başka kargo işlemi sürüyor.');
+  busy.kargola.add(id);busy.barkod.add(id);
+  try{
+    const {data:order,error}=await db.from(TABLE).select('*').eq('siparis_no',id).single();
+    if(error)throw error;
+    if(hasCargoLabel(order))return false;
+    if(!canPrintCargoLabel(order)||!needsCargoLabelRetry(order)||cargoEnvironment(order)==='test')throw Error('Gönderi artık etiket oluşturmaya uygun değil.');
+    await cargoRequest(WH_BARKOD,{siparis_no:String(id),operation:'create'});
+    const {data:saved,error:saveError}=await db.from(TABLE).select('*').eq('siparis_no',id).single();
+    if(saveError)throw saveError;
+    if(String(saved.orderinvoiceid)!==String(order.orderinvoiceid)||!hasCargoLabel(saved))throw Error('Etiket kaydı doğrulanamadı.');
+    return true;
+  }finally{busy.kargola.delete(id);busy.barkod.delete(id);}
+}
+async function createAllMissingLabels(){
+  if(bulkLabelJob||operationFilter!=='label')return;
+  const job={preparing:true};bulkLabelJob=job;syncBulkLabelButton();showBulkLabelErrors([]);
+  let created=0,skipped=0;const errors=[];
+  try{
+    bulkLabelStatus('Etiketi oluşmamış siparişler bulunuyor…');
+    const ids=await bulkLabelIds('create');
+    if(!ids.length){bulkLabelStatus('Etiketi oluşturulacak uygun sipariş bulunamadı.');return;}
+    for(let i=0;i<ids.length;i++){
+      bulkLabelStatus(i+' / '+ids.length+' siparişin etiketi oluşturuluyor…');
+      try{if(await createBulkLabel(ids[i]))created++;else skipped++;}
+      catch(error){errors.push({id:ids[i],message:error.message||'Etiket oluşturulamadı.'});}
+    }
+    bulkLabelStatus(created+' siparişin etiketi oluşturuldu'+(skipped?' · '+skipped+' zaten oluşmuştu':'')+(errors.length?' · '+errors.length+' hata':'')+'. Yazdırmak için sağdaki butonu kullanın.');
+    showBulkLabelErrors(errors);
+    await loadOrders(true);
+  }catch(error){bulkLabelStatus(error.message||'Toplu etiket oluşturulamadı.');}
+  finally{if(bulkLabelJob===job)bulkLabelJob=null;syncBulkLabelButton();}
+}
+window.createAllMissingLabels=createAllMissingLabels;
+
 async function printAllUnprintedLabels(){
   if(bulkLabelJob||operationFilter!=='label')return;
   const w=window.open('','_blank');
   if(!w)return toast('Toplu etiket için açılır pencerelere izin verin.');
-  const job={w,preparing:true,pending:[]};bulkLabelJob=job;syncBulkLabelButton();
+  const job={w,preparing:true,pending:[]};bulkLabelJob=job;syncBulkLabelButton();showBulkLabelErrors([]);
   const release=()=>{clearInterval(job.timer);if(bulkLabelJob===job)bulkLabelJob=null;syncBulkLabelButton();};
   job.timer=setInterval(()=>{if(w.closed&&!job.preparing&&!job.saving){bulkLabelStatus('Pencere kapatıldı. Onaylanmayan sayaçlar değiştirilmedi.');release();}},1000);
   w.document.body.textContent='Yazdırılmamış siparişler bulunuyor…';
@@ -2241,7 +2287,7 @@ async function printAllUnprintedLabels(){
   try{
     const {prepareBulkLabels,confirmBulkLabels}=await import('./bulk-labels.js?v=20261105-bulk-labels');
     const ids=await bulkLabelIds();
-    if(!ids.length)throw Error('Yazdırılmamış uygun sipariş bulunamadı.');
+    if(!ids.length)throw Error('Oluşmuş ve hiç yazdırılmamış etiket bulunamadı. Önce etiket oluşturabilirsiniz.');
     const result=await prepareBulkLabels(ids,{PDFLib:window.PDFLib,fetchLabel:fetchBulkLabel,decorate:(bytes,order)=>CargoPdfText.apply(bytes,order),isCancelled:()=>w.closed,onProgress:(done,total)=>{
       const message=`${done} / ${total} siparişin etiketi hazırlanıyor…`;
       bulkLabelStatus(message);if(!w.closed)w.document.body.textContent=message;

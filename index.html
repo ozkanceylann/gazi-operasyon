@@ -53,7 +53,10 @@
   <style>
     #bulkLabelTools { width:100%; min-width:0; margin:14px 0 12px; }
     #bulkLabelTools[hidden] { display:none !important; }
-    #bulkLabelPrintBtn {
+    #bulkLabelTools .bulk-label-actions { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px; }
+    #bulkLabelErrors { margin:10px 4px; font-size:13px; }
+    #bulkLabelTools .bulk-label-print { height:100%; min-width:0; }
+    #bulkLabelTools .bulk-label-print {
       display:flex; align-items:center; justify-content:center; gap:12px;
       width:100%; max-width:100%; min-height:54px; box-sizing:border-box;
       padding:14px 20px; border:1px solid rgba(255,255,255,.68); border-radius:14px;
@@ -63,17 +66,17 @@
       line-height:1.4; font-family:inherit; font-size:14px; font-weight:600;
       text-align:center; cursor:pointer; transition:background .15s,box-shadow .15s;
     }
-    #bulkLabelPrintBtn svg { width:22px; height:22px; flex:0 0 22px; }
-    #bulkLabelPrintBtn span { min-width:0; overflow-wrap:anywhere; }
-    #bulkLabelPrintBtn:hover:not(:disabled) { background:linear-gradient(135deg,#fff,rgba(207,218,229,.9),rgba(244,247,250,.96)); box-shadow:inset 0 1px 0 #fff,0 6px 20px rgba(0,0,0,.16); }
-    #bulkLabelPrintBtn:focus-visible { outline:3px solid #93b9da; outline-offset:3px; }
-    #bulkLabelPrintBtn:disabled { opacity:.62; cursor:wait; }
+    #bulkLabelTools .bulk-label-print svg { width:22px; height:22px; flex:0 0 22px; }
+    #bulkLabelTools .bulk-label-print span { min-width:0; overflow-wrap:anywhere; }
+    #bulkLabelTools .bulk-label-print:hover:not(:disabled) { background:linear-gradient(135deg,#fff,rgba(207,218,229,.9),rgba(244,247,250,.96)); box-shadow:inset 0 1px 0 #fff,0 6px 20px rgba(0,0,0,.16); }
+    #bulkLabelTools .bulk-label-print:focus-visible { outline:3px solid #93b9da; outline-offset:3px; }
+    #bulkLabelTools .bulk-label-print:disabled { opacity:.62; cursor:wait; }
     #bulkLabelStatus { margin:8px 4px 0; font-size:13px; line-height:1.5; overflow-wrap:anywhere; }
     #bulkLabelStatus:empty { display:none; }
     @media(max-width:600px) {
-      #bulkLabelPrintBtn { min-height:52px; padding:13px 12px; gap:9px; font-size:13px; border-radius:12px; }
+      #bulkLabelTools .bulk-label-print { min-height:52px; padding:12px 6px; gap:6px; font-size:12px; border-radius:12px; }
     }
-    @media(prefers-reduced-motion:reduce) { #bulkLabelPrintBtn { transition:none; } }
+    @media(prefers-reduced-motion:reduce) { #bulkLabelTools .bulk-label-print { transition:none; } }
   </style>
 </head>
 
@@ -148,8 +151,12 @@
       <div class="cargo-legend" role="group" aria-label="Kargo sürecine göre filtrele"><button type="button" class="cargo-status cargo-status--all" data-cargo-filter="all" aria-pressed="true" onclick="filterCargo('all')">Tümü</button><button type="button" class="cargo-status cargo-status--created" data-cargo-filter="created" aria-pressed="false" onclick="filterCargo('created')">Hazırlandı</button><button type="button" class="cargo-status cargo-status--transit" data-cargo-filter="transit" aria-pressed="false" onclick="filterCargo('transit')">Yolda</button><button type="button" class="cargo-status cargo-status--delivery" data-cargo-filter="delivery" aria-pressed="false" onclick="filterCargo('delivery')">Dağıtımda</button><button type="button" class="cargo-status cargo-status--delivered" data-cargo-filter="delivered" aria-pressed="false" onclick="filterCargo('delivered')">Teslim edildi</button><button type="button" class="cargo-status cargo-status--problem" data-cargo-filter="problem" aria-pressed="false" onclick="filterCargo('problem')">Sorun</button><button type="button" class="cargo-status cargo-status--return" data-cargo-filter="return" aria-pressed="false" onclick="filterCargo('return')">Geri Geliyor</button></div>
     </section>
     <section id="bulkLabelTools" hidden>
-      <button id="bulkLabelPrintBtn" class="bulk-label-print" type="button" onclick="printAllUnprintedLabels()"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 8V3h10v5M7 17H4V9h16v8h-3M7 14h10v7H7z"/><path d="M16 11h1"/></svg><span>Yazdırılmamışların tamamını yazdır</span></button>
+      <div class="bulk-label-actions">
+        <button id="bulkLabelCreateBtn" class="bulk-label-print" type="button" onclick="createAllMissingLabels()"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3h8l10 10-8 8L3 11z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span>Tamamına etiket oluştur</span></button>
+        <button id="bulkLabelPrintBtn" class="bulk-label-print" type="button" onclick="printAllUnprintedLabels()"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 8V3h10v5M7 17H4V9h16v8h-3M7 14h10v7H7z"/><path d="M16 11h1"/></svg><span>Yazdırılmamışları yazdır</span></button>
+      </div>
       <p id="bulkLabelStatus" role="status" aria-live="polite"></p>
+      <details id="bulkLabelErrors" hidden></details>
     </section>
 
     <div class="table-wrapper" tabindex="0" aria-label="Sipariş listesi">
@@ -255,7 +262,7 @@ document.getElementById("orderModal").addEventListener("click", function(e){
   <script type="module">
     try {
       await window.waitConfig();
-      await import("./app.js?v=20261105-bulk-labels");
+      await import("./app.js?v=20261105-bulk-separated");
       document.getElementById("brandLogo").src = CONFIG.logo;
       const brandTitle = document.getElementById("brandTitle");
       const brandName = document.createElement("span");

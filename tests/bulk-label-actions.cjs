@@ -1,0 +1,20 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const s=fs.readFileSync(require('node:path').join(__dirname,'../app.js'),'utf8');
+const print=s.slice(s.indexOf('async function fetchBulkLabel('),s.indexOf('async function saveBulkLabelCounter('));
+const create=s.slice(s.indexOf('async function createBulkLabel('),s.indexOf('async function createAllMissingLabels('));
+const ids=s.slice(s.indexOf('async function bulkLabelIds('),s.indexOf('async function fetchBulkLabel('));
+(async()=>{
+ let row={siparis_no:1,kargo_adet:1,orderinvoiceid:'a',etiket_yazdirma_sayisi:0},calls=[],filters=[];
+ const db={from(){const q={select(){return q},eq(){return q},or(v){filters.push(v);return q},gt(){return q},order(){return q},limit(){return Promise.resolve({data:[]})},single(){return Promise.resolve({data:{...row}})}};return q}};
+ const busy={kargola:new Set(),barkod:new Set()};
+ const ctx=vm.createContext({db,busy,TABLE:'orders',LIST_TABLE:'list',WH_BARKOD:'label',cargoStateFilter:()=> 'created',hasCargoLabel:o=>!!o.kargo_zpl,canPrintCargoLabel:()=>true,needsCargoLabelRetry:()=>true,cargoEnvironment:()=> 'production',cargoRequest:async(u,b)=>{calls.push(b.operation);if(b.operation==='create')row.kargo_zpl='saved';return {pdf_base64:'JVBERtest'}}});
+ vm.runInContext(ids+print+create,ctx);
+ await assert.rejects(()=>ctx.fetchBulkLabel(1),/henüz oluşmamış/);assert.deepEqual(calls,[]);assert.equal(busy.barkod.size,0);
+ assert.equal(await ctx.createBulkLabel(1),true);assert.deepEqual(calls,['create']);assert.equal(row.etiket_yazdirma_sayisi,0);
+ assert.equal(await ctx.createBulkLabel(1),false);assert.deepEqual(calls,['create']);
+ const r=await ctx.fetchBulkLabel(1);assert.equal(r.base64,'JVBERtest');assert.deepEqual(calls,['create','print']);assert.equal(row.etiket_yazdirma_sayisi,0);
+ row.etiket_yazdirma_sayisi=1;await assert.rejects(()=>ctx.fetchBulkLabel(1),/zaten yazdırılmış/);assert.deepEqual(calls,['create','print']);
+ filters=[];await ctx.bulkLabelIds('create');assert(!filters.some(f=>f.includes('etiket_yazdirma_sayisi')));assert(filters.some(f=>f.includes('kargo_zpl.is.null')));
+ filters=[];await ctx.bulkLabelIds();assert(filters.some(f=>f.includes('etiket_yazdirma_sayisi.eq.0')));assert(filters.some(f=>f.includes('kargo_zpl.not.is.null')));
+ console.log('PASS: print never creates; create only saves missing labels; no implicit counts; existing labels skipped; independent query filters; busy locks released');
+})().catch(e=>{console.error(e);process.exit(1)});
