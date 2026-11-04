@@ -58,12 +58,12 @@
     draw();page.pushOperators(popGraphicsState());
    }
    function text(line,u,v,size){page.drawText(line,{x:(110-v)*DOT,y:height-(150+u)*DOT,size,font,rotate:degrees(-90),color:rgb(0,0,0)});}
-   // Separate order number on the free right-hand part of the carrier caption row.
+   // Separate order number on the free space between IRS NO and REF on the carrier caption row.
    // Keep SETNO / IRS / REF and the carrier barcodes untouched.
    const heading='Sipariş: '+order.siparis_no;
    let headingSize=14*DOT;
    while(font.widthOfTextAtSize(heading,headingSize)>166*DOT)headingSize*=0.95;
-   field(470,-28,170,20,()=>text(heading,472,-26+font.heightAtSize(headingSize,{descender:false})/DOT,headingSize));
+   field(70,-28,170,20,()=>text(heading,72,-26+font.heightAtSize(headingSize,{descender:false})/DOT,headingSize));
    const productWidth=(amount?540:640)-4;
    {
     // All orders: up to four products in one column; five or more in two.
