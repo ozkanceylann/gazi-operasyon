@@ -93,6 +93,7 @@
         <option>Kargolandı</option>
         <option>Tamamlandı</option>
         <option>Sorunlu</option>
+        <option value="Geri geliyor">Geri geliyor</option>
         <option>İptal</option>
       </select>
 
@@ -283,6 +284,7 @@
         }
         if(st==="Tamamlandı") q=q.or("shipmentStatusCode.eq.5,isDelivered.eq.true");
         else if(st==="Sorunlu") q=q.in("shipmentStatusCode",[6,7]).eq("isDelivered",false);
+        else if(st==="Geri geliyor") q=q.or("shipmentStatusCode.eq.7,and(shipmentStatusCode.is.null,or(shipmentStatus.eq.Geri_Geliyor,shipmentStatus.eq.Geri Geliyor))");
         else if(st) q=q.eq("kargo_durumu",st);
         const {data,error}=await q.order("tarih",{ascending:false}).order("siparis_no",{ascending:false}).range(offset,offset+size-1);
         if(request!==reportRequest)return;
