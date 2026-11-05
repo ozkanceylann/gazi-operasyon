@@ -2431,16 +2431,13 @@ async function openCargoPdf(w, base64, order, {trackPrint=true}={}){
   frame.style.cssText=`display:block;border:0;width:100%;flex:1;min-height:0`;
   w.document.body.appendChild(frame);
   const openPrintDialog=()=>{frame.contentWindow.focus();frame.contentWindow.print();};
-  print.onclick=trackPrint?async()=>{
-    if(print.disabled)return;
-    print.disabled=true;
-    try{
-      openPrintDialog();
-      await recordCargoLabelPrint(order);
-    }catch(error){toast("Yazdırma penceresi açılamadı. "+(error.message||""),8000);}
-    finally{print.disabled=false;}
+  print.onclick=trackPrint?()=>{
+    try{openPrintDialog();}
+    catch(error){toast("Yazdırma penceresi açılamadı. "+(error.message||""),8000);}
   }:openPrintDialog;
   w.document.addEventListener("keydown",event=>{if(event.key==="Escape"){event.preventDefault();w.close();}});
+  // Single labels count once when opened. Bulk printing supplies its own button handler.
+  if(trackPrint)await recordCargoLabelPrint(order);
   return {print,frame};
 }
 
