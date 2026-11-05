@@ -1699,6 +1699,7 @@ ${missingOperationNavigation()}
   <div class="detail-parcel-line">${cargoCountBadge(d.kargo_adet)}<span>paket</span><strong>${escapeHtml(CargoWeights.display(d.kargo_kg,d.kargo_adet)||"—")} kg</strong></div>
  </div></div>
  ${d.notlar?`<div class="detail-group detail-note"><div class="detail-title">Sipariş notu</div><div class="note-text">${escapeHtml(d.notlar)}</div></div>`:""}
+ ${d.sistem_notu?`<div class="detail-group detail-system-note"><div class="detail-title">Sistem notu</div><div class="note-text">${escapeHtml(d.sistem_notu)}</div></div>`:""}
 </div>
 ${OrderReceipts.markup(d)}
 ${extraSlot(d,'noteDetail')}

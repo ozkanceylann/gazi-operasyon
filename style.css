@@ -2024,3 +2024,7 @@ body.orders-page { --bg:#101d15; --text:#edf0e3; background:#101d15; color:#edf0
   flex:1 1 145px; min-height:38px; margin:0; padding:7px 10px;
   box-sizing:border-box; font-size:12px; line-height:1.4; text-align:center;
 }
+
+/* AI explanations are shown only in order details. */
+.detail-system-note .note-text{white-space:pre-wrap;overflow-wrap:anywhere;}
+.detail-system-note{border-left:3px solid #7893a6;}
