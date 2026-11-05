@@ -73,7 +73,7 @@
    // Sender box: a second line directly beneath the sender's name.
    const sellerDigits=String(order.siparis_tel??'').replace(/\D/g,'');
    const sellerPhone=sellerDigits.match(/^(?:90|0)?(5\d{2})(\d{3})(\d{2})(\d{2})$/);
-   if(sellerPhone){
+   if(sellerPhone && sellerPhone.slice(1).join('')!=='5079970697'){
     const phone='0 '+sellerPhone.slice(1).join(' ');
     page.pushOperators(pushGraphicsState(),PDFLib.setCharacterSqueeze(78));
     text(phone,-101,-510,16*DOT);
