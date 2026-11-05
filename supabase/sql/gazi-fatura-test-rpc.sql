@@ -39,3 +39,8 @@ begin
  return jsonb_build_object('success',true,'issued',false,'baglanti_basarili',ok,'fatura_id',f.id,'siparis_no',f.siparis_no,'durum',f.durum,'ortam','test','ara_toplam',f.ara_toplam,'kdv_toplami',f.kdv_toplami,'genel_toplam',f.genel_toplam,'message',msg);
 end $function$
 ;
+
+revoke all on function public.gazi_fatura_test_hazirla(integer,uuid) from public,anon,authenticated;
+grant execute on function public.gazi_fatura_test_hazirla(integer,uuid) to service_role;
+revoke all on function public.gazi_fatura_test_sonuc(uuid,jsonb) from public,anon,authenticated;
+grant execute on function public.gazi_fatura_test_sonuc(uuid,jsonb) to service_role;
