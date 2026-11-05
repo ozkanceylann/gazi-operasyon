@@ -1196,6 +1196,7 @@ function syncCargoTools(){
   syncBulkLabelButton();
   const tools=document.getElementById("cargoTools");
   if(tools) tools.hidden=operationFilter==="label" || !["kargolandi","tamamlandi","sorunlu","iade"].includes(currentTab);
+  if(tools&&!tools.hidden&&!cargoSyncBusy)void showLatestCargoSummary();
   document.querySelectorAll("[data-cargo-filter]").forEach(button=>{
     button.setAttribute("aria-pressed",String(button.dataset.cargoFilter===cargoFilter));
   });
@@ -1247,6 +1248,34 @@ async function connectCargo(){
   }catch(error){toast(error.message,8000);}
   finally{button.disabled=false;button.textContent=label;}
 }
+let cargoSummaryReadAt=0;
+let cargoSummaryReadVersion=0;
+function formatCargoSummary(result, completedAt){
+  const time=new Date(completedAt||result.checked_at);
+  const stamp=Number.isFinite(+time)?new Intl.DateTimeFormat("tr-TR",{
+    timeZone:"Europe/Istanbul",dateStyle:"short",timeStyle:"short"
+  }).format(time):"";
+  let message=(stamp?"Son toplu sorgu · "+stamp+" · ":"")+
+    `${result.received} gönderi incelendi · ${result.updated} kayıt güncellendi · ${result.unchanged} değişmedi · ${result.unmatched} eşleşmedi.`;
+  if(result.ambiguous)message+=` ${result.ambiguous} belirsiz eşleşme atlandı.`;
+  if(result.has_more)message+=" Kalan günler için tekrar güncelleyin.";
+  return message;
+}
+async function showLatestCargoSummary(force=false){
+  if(!force&&Date.now()-cargoSummaryReadAt<30000)return false;
+  cargoSummaryReadAt=Date.now();
+  const version=++cargoSummaryReadVersion;
+  try{
+    const {data,error}=await db.from("gazi_dhl_bulk_state")
+      .select("last_completed_at,summary").eq("id",1).maybeSingle();
+    if(error||!data?.summary?.success||version!==cargoSummaryReadVersion||(!force&&cargoSyncBusy))return false;
+    document.getElementById("cargoSyncStatus").textContent=formatCargoSummary(data.summary,data.last_completed_at);
+    return true;
+  }catch(error){
+    console.warn("Son DHL sorgu özeti okunamadı:",error);
+    return false;
+  }
+}
 async function refreshCargoMovements(){
   if(cargoSyncBusy)return;
   cargoSyncBusy=true;const button=document.getElementById("refreshCargoBtn");const status=document.getElementById("cargoSyncStatus");const label=button.textContent;
@@ -1255,9 +1284,7 @@ async function refreshCargoMovements(){
     status.textContent="Kargo durumları toplu sorgulanıyor…";
     const url=CONFIG.webhooks.hareket_toplu||new URL("gazi_hareket_toplu",CONFIG.webhooks.hareket).href;
     const result=await cargoRequest(url,{operation:"hareket_toplu"});
-    status.textContent=`${result.received} gönderi incelendi · ${result.updated} kayıt güncellendi · ${result.unchanged} değişmemiş · ${result.unmatched} eşleşmedi.`;
-    if(result.ambiguous)status.textContent+=` ${result.ambiguous} belirsiz eşleşme atlandı.`;
-    if(result.has_more)status.textContent+=" Önceki günler tamamlandı; kalan günler için yeniden güncelleyebilirsiniz.";
+    if(!await showLatestCargoSummary(true))status.textContent=formatCargoSummary(result);
     await loadOrders(true);
     if(selectedOrder&&document.getElementById("orderModal").style.display==="flex")await openOrder(selectedOrder.siparis_no);
     toast(result.has_more?"Geçmiş günler toplu güncellendi. Kalan günler için tekrar güncelleyin.":"Kargo durumları toplu güncellendi.",6000);
