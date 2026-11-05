@@ -70,6 +70,15 @@
     text(heading,72,-20,headingSize);
     page.pushOperators(popGraphicsState());
    });
+   // Sender box: a second line directly beneath the sender's name.
+   const sellerDigits=String(order.siparis_tel??'').replace(/\D/g,'');
+   const sellerPhone=sellerDigits.match(/^(?:90|0)?(5\d{2})(\d{3})(\d{2})(\d{2})$/);
+   if(sellerPhone){
+    const phone='0 '+sellerPhone.slice(1).join(' ');
+    page.pushOperators(pushGraphicsState(),PDFLib.setCharacterSqueeze(78));
+    text(phone,-101,-510,16*DOT);
+    page.pushOperators(popGraphicsState());
+   }
    const productWidth=(amount?540:640)-4;
    {
     // All orders: up to four products in one column; five or more in two.
