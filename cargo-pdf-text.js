@@ -75,9 +75,14 @@
    const sellerPhone=sellerDigits.match(/^(?:90|0)?(5\d{2})(\d{3})(\d{2})(\d{2})$/);
    if(sellerPhone && sellerPhone.slice(1).join('')!=='5079970697'){
     const phone='0 '+sellerPhone.slice(1).join(' ');
-    page.pushOperators(pushGraphicsState(),PDFLib.setCharacterSqueeze(78));
-    text(phone,-101,-510,16*DOT);
-    page.pushOperators(popGraphicsState());
+    const caption='İLGİLİ SATICI TEL:';
+    const captionSize=14*DOT,phoneSize=24*DOT,gap=10*DOT;
+    const captionWidth=font.widthOfTextAtSize(caption,captionSize);
+    const lineWidth=captionWidth+gap+font.widthOfTextAtSize(phone,phoneSize);
+    // Center the line within the sender box, with a larger, unsqueezed number.
+    const start=-101+(530-lineWidth/DOT)/2;
+    text(caption,start,-510,captionSize);
+    text(phone,start+(captionWidth+gap)/DOT,-510,phoneSize);
    }
    const productWidth=(amount?540:640)-4;
    {
