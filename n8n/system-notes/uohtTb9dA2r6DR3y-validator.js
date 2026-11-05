@@ -242,6 +242,21 @@ return $input.all().map((item, index) => {
     data.kargo_adet="1";
     data.kargo_kg="10";
   }
+  // Source-confirmed pink olives in whole 10 kg units; explicit packaging wins.
+  const pinkLines=rawOrder.split(/\r?\n/).map(foldProduct).filter(line=>/\d\s*(?:kg|kilo|kilogram)\b/.test(line));
+  const customPinkPackaging=/\b(?:paket|koli|adet|tane|ambalaj|ayri|bol|bolun|bolunsun)\b|\d\s*[x×*+]|\d\s*(?:kg|kilo|kilogram)\s*['’]?\s*lik\b|\bhepsi\s+bir\s+kg\b/.test(rawFolded);
+  const pinkWeights=pinkLines.map(line=>{
+    const match=line.match(/^(\d+(?:[.,]\d+)?)\s*(?:kilogram|kilo|kg)\s+(.+)$/);
+    if(!match||!/\b(?:zeytin|pembe\s+cizik|domat\s+kirma|siyah)\b/.test(match[2])||
+       /\b(?:uzum|tursu|yag|zeytinyagi|yaprak|ceviz|badem)\b/.test(match[2])||/\d/.test(match[2]))return null;
+    const kg=Number(match[1].replace(',','.'));
+    return kg>0&&kg<=1000&&kg%10===0?kg:null;
+  });
+  if(!parseError&&!customPinkPackaging&&/\bpembe\s+cizik\b/.test(rawFolded)&&
+     pinkWeights.length===data.urunler.length&&pinkWeights.length>0&&pinkWeights.every(kg=>kg!==null)){
+    const parcelCount=pinkWeights.reduce((sum,kg)=>sum+kg/10,0);
+    if(parcelCount<=100){data.kargo_adet=String(parcelCount);data.kargo_kg=Array(parcelCount).fill('10').join('+');}
+  }
   const smallBoxTotal=smallBoxProductTotal(data.urunler);
   const explicitSeparateParcels=/\bayri\s+(?:ayri\s+)?(?:koli|kargo|gonderi)\b|\b(?:[2-9]\d*|iki|uc|dort|bes|alti|yedi)\s+koli\b/.test(foldedPayment);
   if(!parseError&&!explicitSeparateParcels&&smallBoxTotal>0&&smallBoxTotal<=7){
