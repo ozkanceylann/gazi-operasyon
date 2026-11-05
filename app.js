@@ -2298,11 +2298,11 @@ async function printAllUnprintedLabels(){
     const preview=await openCargoPdf(w,btoa(binary),{ad_soyad:'Toplu Etiketler',siparis_no:new Date().toISOString().slice(0,10),kargo_adet:result.pageCount},{trackPrint:false});
     job.pending=result.orders;
     const panel=w.document.createElement('section');
-    panel.style.cssText='padding:10px;background:#fff4d6;font:14px system-ui;color:#263c2e';
-    const info=w.document.createElement('p');info.textContent=`${result.orders.length} sipariş · ${result.pageCount} etiket hazır. Yazdır’a bastığınızda yazdırma penceresi açılır ve sayaçlar otomatik güncellenir.`;
+    panel.style.cssText='padding:10px;background:#f3f5f4;font:14px system-ui;color:#263c2e';
+    panel.hidden=!result.failed.length;
     const retry=w.document.createElement('button');retry.type='button';retry.textContent='Sayaç kaydını tekrar dene';retry.hidden=true;
     const status=w.document.createElement('p');status.setAttribute('role','status');
-    panel.append(info,retry,status);
+    panel.append(retry,status);
     if(result.failed.length){const errors=w.document.createElement('details'),summary=w.document.createElement('summary'),list=w.document.createElement('ul');summary.textContent=`${result.failed.length} sipariş PDF’ye eklenemedi`;
       for(const error of result.failed){const li=w.document.createElement('li');li.textContent=`#${error.id}: ${error.message}`;list.append(li);}errors.append(summary,list);panel.append(errors);}
     w.document.body.insertBefore(panel,w.document.querySelector('iframe'));
@@ -2316,6 +2316,7 @@ async function printAllUnprintedLabels(){
       try{
         const saved=await confirmBulkLabels(job.pending,saveBulkLabelCounter);job.pending=saved.remaining;
         retry.hidden=!saved.errors.length;
+        panel.hidden=!result.failed.length&&!saved.errors.length;
         status.textContent=saved.errors.length?saved.errors.map(e=>`#${e.id}: ${e.message}`).join(' · '):'Yazdırma sayaçları güncellendi.';
         if(!saved.errors.length){bulkLabelStatus(`${result.orders.length} siparişin yazdırma sayacı güncellendi.`);release();}
         await loadOrders(true);
@@ -2327,7 +2328,7 @@ async function printAllUnprintedLabels(){
       if(job.saving)return;
       // Open synchronously from the click, preserving browser print permission.
       // Cancelling the native print dialog still counts as opening print.
-      try{openPrintDialog();}catch(error){status.textContent='Yazdırma penceresi açılamadı: '+(error.message||'');return;}
+      try{openPrintDialog();}catch(error){panel.hidden=false;status.textContent='Yazdırma penceresi açılamadı: '+(error.message||'');return;}
       await saveCounters();
     };
     bulkLabelStatus(`${result.orders.length} sipariş · ${result.pageCount} etiket hazır${result.failed.length?` · ${result.failed.length} hata`:''}. PDF penceresindeki Yazdır butonunu kullanın.`);
@@ -2365,7 +2366,7 @@ async function openCargoPdf(w, base64, order, {trackPrint=true}={}){
   // revoke on unload: that can race with a download already starting.
   w.document.title=filename.replace(/\.pdf$/i,"");
   w.document.body.replaceChildren();
-  w.document.body.style.cssText="margin:0";
+  w.document.body.style.cssText="margin:0;height:100dvh;display:flex;flex-direction:column";
   // Always expose the complete original multi-page PDF; the embedded viewer can initially show only page one.
   const download=w.document.createElement("a");
   download.href=url;download.download=filename;
@@ -2373,16 +2374,16 @@ async function openCargoPdf(w, base64, order, {trackPrint=true}={}){
   download.textContent=(Number.isSafeInteger(parcelCount)&&parcelCount>1?parcelCount+" koli · ":"")+"PDF indir · "+filename;
   download.style.cssText="display:block;box-sizing:border-box;min-height:42px;padding:10px;background:#e6f1ea;color:#20543b;font:14px system-ui;text-decoration:none";
   const toolbar=w.document.createElement("div");
-  toolbar.style.cssText="display:flex;align-items:center;gap:8px;background:#e6f1ea;min-height:48px";
-  download.style.flex="1";
+  toolbar.style.cssText="display:flex;align-items:center;gap:12px;padding:8px 12px;box-sizing:border-box;background:#e6f1ea;min-height:64px;flex:0 0 auto";
+  download.style.flex="1";download.style.minWidth="0";download.style.overflowWrap="anywhere";
   const print=w.document.createElement("button");
   print.type="button";print.textContent="Yazdır";
-  print.style.cssText="margin:4px 10px;padding:10px 16px;cursor:pointer";
+  print.style.cssText="flex:0 0 auto;min-width:136px;min-height:46px;margin:0;padding:12px 28px;border:1px solid #1b4930;border-radius:999px;background:linear-gradient(135deg,#357c51,#20543b);color:#fff;font:700 16px system-ui;letter-spacing:.2px;box-shadow:0 4px 12px #163c2933;cursor:pointer";
   toolbar.append(download,print);
   w.document.body.appendChild(toolbar);
   const frame=w.document.createElement("iframe");
   frame.title=filename;frame.src=url+"#view=FitH&toolbar=0";
-  frame.style.cssText=`display:block;border:0;width:100%;height:calc(100vh - 48px)`;
+  frame.style.cssText=`display:block;border:0;width:100%;flex:1;min-height:0`;
   w.document.body.appendChild(frame);
   const openPrintDialog=()=>{frame.contentWindow.focus();frame.contentWindow.print();};
   print.onclick=trackPrint?async()=>{

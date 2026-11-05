@@ -1,7 +1,7 @@
 // ================================
 // 🔥 VERSION = DEPLOY TARİHİ
 // ================================
-const VERSION = "20261105-heading-fit-166";
+const VERSION = "20261105-print-toolbar-167";
 const CACHE_NAME = `siparis-app-${VERSION}`;
 
 // Cache edilecek dosyalar
