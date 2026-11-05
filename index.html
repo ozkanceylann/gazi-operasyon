@@ -78,7 +78,7 @@
     }
     @media(prefers-reduced-motion:reduce) { #bulkLabelTools .bulk-label-print { transition:none; } }
   </style>
-  <link rel="stylesheet" href="operations-layout.css?v=20261105-compact-search">
+  <link rel="stylesheet" href="operations-layout.css?v=20261105-compact-header">
 </head>
 
 <body class="orders-page">
@@ -121,11 +121,12 @@
 
   <!-- ANA İÇERİK -->
   <main class="content-area">
+    <header class="page-header"><div><h1 id="pageTitle">Bekleyen Siparişler</h1><p id="listSummary" role="status" aria-live="polite">Siparişler yükleniyor…</p></div><div class="page-header-actions"><button class="btn-refresh" type="button" onclick="clearSearch()" aria-label="Listeyi yenile" title="Listeyi yenile">↻ Yenile</button></div></header>
     <section class="top-bar search-slot order-search-top" aria-label="Sipariş arama">
       <input id="searchInput" type="search" aria-label="Tüm siparişlerde ara" placeholder="Tüm siparişlerde ara" autocomplete="off" enterkeyhint="search" />
       <input id="tabSearchInput" type="search" aria-label="Sekmede ara" placeholder="Bu sekmede ara" autocomplete="off" enterkeyhint="search" />
     </section>
-    <header class="page-header"><div><p class="page-eyebrow">SİPARİŞ YÖNETİMİ</p><h1 id="pageTitle">Bekleyen Siparişler</h1><p id="listSummary" role="status" aria-live="polite">Siparişler yükleniyor…</p></div><div class="page-header-actions"><button class="btn-refresh" type="button" onclick="clearSearch()" aria-label="Listeyi yenile" title="Listeyi yenile">↻ Yenile</button></div></header>
+
 
 
 
@@ -260,7 +261,7 @@ document.getElementById("orderModal").addEventListener("click", function(e){
   <script type="module">
     try {
       await window.waitConfig();
-      await import("./app.js?v=20261105-auto-search");
+      await import("./app.js?v=20261105-label-tools-hidden");
       document.getElementById("brandLogo").src = CONFIG.logo;
       const brandTitle = document.getElementById("brandTitle");
       const brandName = document.createElement("span");

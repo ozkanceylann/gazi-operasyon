@@ -1194,7 +1194,7 @@ function isLiveShipment(order){
 function syncCargoTools(){
   syncBulkLabelButton();
   const tools=document.getElementById("cargoTools");
-  if(tools) tools.hidden=!["kargolandi","tamamlandi","sorunlu","iade"].includes(currentTab);
+  if(tools) tools.hidden=operationFilter==="label" || !["kargolandi","tamamlandi","sorunlu","iade"].includes(currentTab);
   document.querySelectorAll("[data-cargo-filter]").forEach(button=>{
     button.setAttribute("aria-pressed",String(button.dataset.cargoFilter===cargoFilter));
   });

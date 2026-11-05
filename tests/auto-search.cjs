@@ -10,5 +10,5 @@ input('tabSearchInput','');flush();assert.deepEqual(calls,['all','tab','tab']);
 input('searchInput','x',true);assert.equal(timers.size,0);handlers.compositionend({target:fields.searchInput});flush();assert.equal(calls.at(-1),'all');
 input('searchInput','old');c.cancelAutoSearch();flush();assert.equal(calls.length,4);
 input('searchInput','stale');fields.searchInput.value='';flush();assert.equal(calls.length,4);
-const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');assert(html.indexOf('id="searchInput"')<html.indexOf('class="page-header"'));assert(!html.includes('onclick="searchActiveOrders()"'));assert.equal((html.match(/id="searchInput"/g)||[]).length,1);assert.equal((html.match(/id="tabSearchInput"/g)||[]).length,1);
-console.log('PASS: debounced input, correct scope, clearing, IME composition, navigation cancellation, stale query guard, searches first, no search button');
+const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');assert(html.indexOf('class="page-header"')<html.indexOf('id="searchInput"'));assert(!html.includes('onclick="searchActiveOrders()"'));assert.equal((html.match(/id="searchInput"/g)||[]).length,1);assert.equal((html.match(/id="tabSearchInput"/g)||[]).length,1);
+console.log('PASS: debounced input, correct scope, clearing, IME composition, navigation cancellation, stale query guard, compact header before searches, no search button');
