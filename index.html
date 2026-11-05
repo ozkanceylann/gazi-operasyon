@@ -78,7 +78,7 @@
     }
     @media(prefers-reduced-motion:reduce) { #bulkLabelTools .bulk-label-print { transition:none; } }
   </style>
-  <link rel="stylesheet" href="operations-layout.css?v=20261105-auto-search">
+  <link rel="stylesheet" href="operations-layout.css?v=20261105-compact-search">
 </head>
 
 <body class="orders-page">
@@ -122,14 +122,8 @@
   <!-- ANA İÇERİK -->
   <main class="content-area">
     <section class="top-bar search-slot order-search-top" aria-label="Sipariş arama">
-      <label class="order-search-field" for="searchInput">
-        <span class="order-search-label">Tüm siparişlerde ara</span>
-        <span class="order-search-control"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="searchInput" type="search" aria-label="Tüm siparişlerde ara" placeholder="İsim, sipariş no, telefon veya adres" autocomplete="off" enterkeyhint="search" /></span>
-      </label>
-      <label class="order-search-field" for="tabSearchInput">
-        <span class="order-search-label">Bu sekmede ara</span>
-        <span class="order-search-control"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M7 12h10M10 19h4"/></svg><input id="tabSearchInput" type="search" aria-label="Sekmede ara" placeholder="Açık listedeki siparişleri filtrele" autocomplete="off" enterkeyhint="search" /></span>
-      </label>
+      <input id="searchInput" type="search" aria-label="Tüm siparişlerde ara" placeholder="Tüm siparişlerde ara" autocomplete="off" enterkeyhint="search" />
+      <input id="tabSearchInput" type="search" aria-label="Sekmede ara" placeholder="Bu sekmede ara" autocomplete="off" enterkeyhint="search" />
     </section>
     <header class="page-header"><div><p class="page-eyebrow">SİPARİŞ YÖNETİMİ</p><h1 id="pageTitle">Bekleyen Siparişler</h1><p id="listSummary" role="status" aria-live="polite">Siparişler yükleniyor…</p></div><div class="page-header-actions"><button class="btn-refresh" type="button" onclick="clearSearch()" aria-label="Listeyi yenile" title="Listeyi yenile">↻ Yenile</button></div></header>
 
@@ -140,12 +134,10 @@
       <button type="button" class="operation-card operation-card--label" data-operation="label" aria-pressed="false" onclick="openOperationQueue('label')"><span>Etiket bekleyen</span><div class="handover-count"><strong data-operation-count="label">…</strong><small data-operation-parcels="label">… parça</small></div><small>Etiketi oluşmayan / hiç yazdırılmayan</small></button>
       <button type="button" class="operation-card operation-card--handover" data-operation="handover" aria-pressed="false" onclick="openOperationQueue('handover')"><span>DHL teslim alımı bekleyen</span><div class="handover-count"><strong data-operation-count="handover">…</strong><small data-operation-parcels="handover">… parça</small></div><small>Etiketi hazır, çıkış bekliyor</small></button>
       <button type="button" class="operation-card operation-card--attention" data-operation="attention" aria-pressed="false" onclick="openOperationQueue('attention')"><span>Müdahale gereken</span><div class="handover-count"><strong data-operation-count="attention">…</strong><small data-operation-parcels="attention">… parça</small></div><small>Teslim edilemedi / destek gerekiyor</small></button>
-      <button type="button" class="operation-card operation-card--receipt" data-operation="receipt" aria-pressed="false" onclick="openOperationQueue('receipt')"><span>Dekont bekleyen</span><div class="handover-count"><strong data-operation-count="receipt">…</strong><small data-operation-parcels="receipt">… parça</small></div><small>Dekont eksik / kontrol gerekli</small></button>
+      <button type="button" class="operation-card operation-card--receipt compact-receipt" data-operation="receipt" aria-pressed="false" onclick="openOperationQueue('receipt')"><span>Dekont bekleyenler</span><strong data-operation-count="receipt">…</strong><small data-operation-parcels="receipt" hidden>… parça</small></button>
+      <button id="scanLabelBtn" class="label-scan-launch compact-scan" type="button" disabled aria-label="Kamerayla etiket okut">📷 Kamera Okut</button>
     </section>
 
-    <div class="order-quick-actions">
-      <button id="scanLabelBtn" class="label-scan-launch" type="button" disabled aria-label="Kamerayla etiket okut">📷 Kamera Okut</button>
-    </div>
 
 
     <section id="cargoTools" class="cargo-tools" hidden aria-label="Kargo işlemleri">

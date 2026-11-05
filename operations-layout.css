@@ -1,25 +1,19 @@
-/* Search-first operation layout, scoped to the order screen. */
-.orders-page .content-area { padding:24px 28px 32px; }
+/* Compact search and action rows. */
+.orders-page .content-area { padding:12px 28px 32px; }
 .orders-page .top-bar.order-search-top {
-  display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:stretch;
-  gap:14px; margin:0 0 22px; padding:16px; border:1px solid var(--ui-line-soft);
-  border-radius:18px; background:linear-gradient(125deg,#203527,#15251b);
-  box-shadow:0 8px 24px #0002,inset 0 1px 0 #ffffff08;
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:8px; margin:0 0 14px; padding:0; border:0; border-radius:0;
+  background:transparent; box-shadow:none;
 }
-.orders-page .order-search-field { display:flex; flex-direction:column; gap:8px; min-width:0; margin:0; }
-.orders-page .order-search-label { font-size:11px; font-weight:700; letter-spacing:.3px; color:#d5dfd3; }
-.orders-page .order-search-control { position:relative; display:flex; align-items:center; min-width:0; }
-.orders-page .order-search-control svg { position:absolute; left:14px; width:19px; height:19px; color:#b2c3ad; pointer-events:none; }
 .orders-page .order-search-top input,
 .orders-page .order-search-top #tabSearchInput {
-  display:block; box-sizing:border-box; width:100%; min-width:0; flex:1; min-height:46px;
-  margin:0; padding:12px 14px 12px 42px; border-radius:11px;
-  border:1px solid #4e6654; background:#0f2016; color:var(--ui-ink);
-  font:inherit; font-size:14px; line-height:1.4; box-shadow:inset 0 1px 3px #0002;
+  display:block; box-sizing:border-box; width:100%; min-width:0; min-height:42px;
+  margin:0; padding:10px 12px; border-radius:10px;
+  border:1px solid var(--ui-line-soft); background:var(--ui-inset); color:var(--ui-ink);
+  font-family:inherit; font-size:14px; line-height:1.35; box-shadow:none;
 }
 .orders-page .order-search-top input:focus {
-  outline:2px solid #d4a857aa; outline-offset:2px; border-color:#d4a857;
-  background:#162a1d;
+  outline:2px solid #d4a857aa; outline-offset:1px; border-color:#d4a857;
 }
 .orders-page .page-header { padding:0 2px 18px; margin:0 0 18px; border-bottom:1px solid var(--ui-line-soft); align-items:center; }
 .orders-page .page-header h1 { font-size:25px; line-height:1.2; letter-spacing:-.4px; }
@@ -39,23 +33,39 @@
 .orders-page .cargo-legend { gap:7px; }
 .orders-page .table-wrapper { border-radius:15px; }
 .orders-page #bulkLabelTools { margin:4px 0 14px; }
-@media (max-width:1100px) and (min-width:769px) {
-  .orders-page .content-area { padding:20px; }
-  .orders-page .operation-counters { grid-template-columns:repeat(3,minmax(0,1fr)); }
+
+.orders-page .operation-counters { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.orders-page #operationCounters .compact-receipt,
+.orders-page #operationCounters .compact-scan {
+  grid-column:span 2; display:flex; flex-direction:row; align-items:center; justify-content:center;
+  gap:8px; box-sizing:border-box; width:100%; min-width:0; height:40px; min-height:40px;
+  margin:0; padding:8px 10px; border:1px solid var(--ui-accent-line); border-radius:10px;
+  background:#263d2d; color:#e1c589; font-family:inherit; font-size:13px; font-weight:600; line-height:1.2;
+  box-shadow:none;
 }
-@media (max-width:768px) {
-  .orders-page .content-area { padding:70px 12px 96px; }
-  .orders-page .top-bar.order-search-top { padding:12px; gap:12px; margin-bottom:18px; border-radius:15px; }
-  .orders-page .order-search-top input,.orders-page .order-search-top #tabSearchInput { font-size:16px; min-height:44px; }
+.orders-page #operationCounters .compact-receipt > span { font-size:inherit; line-height:inherit; }
+.orders-page #operationCounters .compact-receipt > strong { font-size:14px; line-height:1; color:inherit; }
+.orders-page #operationCounters .compact-receipt > small[hidden] { display:none; }
+@media(max-width:1100px) and (min-width:901px) {
+  .orders-page .content-area { padding:12px 20px 24px; }
+}
+@media(max-width:900px) {
+  .orders-page .content-area {
+    padding:calc(8px + env(safe-area-inset-top)) 12px calc(100px + env(safe-area-inset-bottom));
+  }
+  .orders-page .top-bar.order-search-top {
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr); padding:0; gap:8px; margin-bottom:14px;
+    border:0; background:transparent; box-shadow:none;
+  }
+  .orders-page .order-search-top input,.orders-page .order-search-top #tabSearchInput {
+    font-size:16px; min-height:42px; padding:9px 10px;
+  }
   .orders-page .page-header { gap:10px; margin-bottom:14px; padding-bottom:14px; }
   .orders-page .page-header h1 { font-size:21px; }
   .orders-page .page-header .btn-refresh { padding:9px 11px; }
   .orders-page .operation-counters { grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
   .orders-page .operation-card { min-height:100px; padding:12px; }
-  .orders-page .operation-card:last-child:nth-child(odd) { grid-column:1 / -1; min-height:88px; }
+  .orders-page #operationCounters .compact-receipt,
+  .orders-page #operationCounters .compact-scan { grid-column:span 1; font-size:12px; gap:6px; }
   .orders-page .cargo-tools { padding:12px; }
-}
-@media (max-width:540px) {
-  .orders-page .top-bar.order-search-top { grid-template-columns:minmax(0,1fr); gap:12px; }
-  .orders-page .order-search-label { font-size:11px; }
 }
