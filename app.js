@@ -872,6 +872,7 @@ tbody.appendChild(tr);
 });
 
   if(typeof hasMore === "boolean") toggleLoadMore(hasMore);
+  syncSingleLabelCreateButtons();
 }
 
 function parseProduct(v){
@@ -2174,7 +2175,23 @@ async function directShipFromDetail(button){
 }
 
 let bulkLabelJob=null;
+function syncSingleLabelCreateButtons(){
+  const locked=bulkLabelJob?.kind==='create';
+  document.querySelectorAll('.btn-cargo-label, #btnBarcode').forEach(button=>{
+    const isCreate=button.dataset.labelOperation==='create'||button.classList.contains('cargo-label-create');
+    if(locked&&isCreate){
+      if(!button.disabled||button.dataset.bulkCreateLocked==='1'){
+        button.dataset.bulkCreateLocked='1';button.disabled=true;
+      }
+    }else if(button.dataset.bulkCreateLocked==='1'){
+      delete button.dataset.bulkCreateLocked;
+      const id=Number(button.closest('[data-order-id]')?.dataset.orderId||selectedOrder?.siparis_no);
+      button.disabled=busy.kargola.has(id)||busy.barkod.has(id);
+    }
+  });
+}
 function syncBulkLabelButton(){
+  syncSingleLabelCreateButtons();
   const box=document.getElementById('bulkLabelTools');
   if(!box)return;
   box.hidden=operationFilter!=='label'&&!bulkLabelJob;
@@ -2257,7 +2274,7 @@ async function createBulkLabel(id){
 }
 async function createAllMissingLabels(){
   if(bulkLabelJob||operationFilter!=='label')return;
-  const job={preparing:true};bulkLabelJob=job;syncBulkLabelButton();showBulkLabelErrors([]);
+  const job={kind:'create',preparing:true};bulkLabelJob=job;syncBulkLabelButton();showBulkLabelErrors([]);
   let created=0,skipped=0;const errors=[];
   try{
     bulkLabelStatus('Etiketi oluşmamış siparişler bulunuyor…');
@@ -2488,6 +2505,7 @@ function updateCargoLabelButton(button,order){
   button.dataset.labelOperation=hasCargoLabel(order)?"print":"create";
   button.classList.toggle("cargo-label-print",hasCargoLabel(order));
   button.classList.toggle("cargo-label-create",!hasCargoLabel(order));
+  syncSingleLabelCreateButtons();
 }
 async function recordCargoLabelPrint(order){
   try{
@@ -2523,6 +2541,7 @@ async function retryCargoLabel(siparisNo,button){
   if(!Number.isSafeInteger(id)||id<1||button.disabled)return;
   if(busy.kargola.has(id)||busy.barkod.has(id))return toast("Bu siparişin kargo işlemi sürüyor.");
   const operation=button.dataset.labelOperation||(/Yazdır/.test(button.textContent)?"print":"create");
+  if(operation==="create"&&bulkLabelJob?.kind==="create")return toast("Toplu etiket oluşturma sürüyor. İşlem bitince tekrar deneyin.");
   // Only an explicit Print click opens a window, synchronously for popup permission.
   const w=operation==="print"?window.open("","_blank"):null;
   if(operation==="print"&&!w)return toast("Etiket ekranı için açılır pencerelere izin verin.");
