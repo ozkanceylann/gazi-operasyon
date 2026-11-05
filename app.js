@@ -2875,9 +2875,51 @@ function setTab(tab, operation="", forceCounts=false){
 
 async function goToLastOrder(button){
   if(listLoading||button.disabled||button.style.display==="none"||currentTab!=="bekleyen")return;
-  button.disabled=true;
-  try{await loadOrders(true,false,true);}
-  finally{button.disabled=false;}
+  const request=++listRequest,originalText=button.textContent;
+  const more=document.getElementById("loadMoreBtn");
+  button.disabled=true;listLoading=true;
+  if(more)more.disabled=true;
+  const rows=new Map(),batchSize=200;
+  try{
+    let offset=0,total=null;
+    for(;;){
+      if(request!==listRequest)return;
+      button.textContent=total===null?"Tüm siparişler yükleniyor…":rows.size+" / "+total+" sipariş yükleniyor…";
+      let query=db.from(LIST_TABLE).select("*",{count:"exact"})
+        .or("kargo_durumu.is.null,kargo_durumu.neq.Silindi");
+      query=applyCargoFilter(applyTabFilter(query,currentTab,operationFilter,cargoFilterGlobal));
+      const {data,error,count}=await query.order("liste_sira_no",{ascending:true})
+        .order("siparis_no",{ascending:true}).range(offset,offset+batchSize-1);
+      if(request!==listRequest)return;
+      if(error)throw error;
+      if(typeof count==="number")total=count;
+      for(const order of data||[])rows.set(Number(order.siparis_no),order);
+      if(!data?.length||data.length<batchSize)break;
+      offset+=data.length;
+    }
+    const all=[...rows.values()],tbody=document.getElementById("ordersBody");
+    currentPage=Math.max(1,Math.ceil(all.length/PAGE_SIZE));
+    markExtras(all);renderTableHeader();
+    renderTable(all,{append:false,hasMore:false});
+    updateListHeading(false,all.length+" sipariş gösteriliyor · Tüm liste yüklendi");
+    tbody.querySelector("tr[data-order-id]:last-child")?.scrollIntoView({
+      behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"center"
+    });
+    // Enrich in bounded groups without delaying the last-order navigation.
+    void (async()=>{
+      for(let i=0;i<all.length&&request===listRequest;i+=batchSize){
+        await hydrateExtras(all.slice(i,i+batchSize),()=>request===listRequest&&tbody.isConnected!==false,tbody);
+      }
+    })().catch(error=>console.error("Sipariş ek bilgileri:",error));
+  }catch(error){
+    if(request===listRequest){
+      toast("Tüm liste yüklenemedi. Yeniden deneyin.",6000);
+      updateListHeading(false,"Tüm liste yüklenemedi; mevcut siparişler korunuyor.");
+    }
+  }finally{
+    button.disabled=false;button.textContent=originalText;
+    if(request===listRequest){listLoading=false;if(more)more.disabled=false;}
+  }
 }
 
 function loadMore(){
