@@ -301,6 +301,68 @@
           "responseCode": 200
         }
       }
+    },
+    {
+      "id": "d03738fc-d108-4292-b170-2fd10a716ed6",
+      "name": "İşNet · Sunucu çıkış IP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1000,
+        0
+      ],
+      "parameters": {
+        "url": "https://api.ipify.org?format=json",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "0878ec68-c470-4c3c-8706-a31b00367746",
+      "name": "İşNet · Adres defteri erişimi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1250,
+        0
+      ],
+      "parameters": {
+        "url": "={{ $('İşNet test ayarlarını oku').first().json.addressbook_service_url + '?wsdl' }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "0f288cdf-4c10-4735-948d-3c22e0be37f4",
+      "name": "İşNet · Bağlantı teşhisi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const ip=$('İşNet · Sunucu çıkış IP').first().json;const address=$input.first().json;const invoice=$('Servis tanımını doğrula').first().json;return [{json:{outbound_ip:ip.body?.ip||null,ip_service_status:ip.statusCode||null,invoice_wsdl_ok:invoice.success===true,addressbook_status:address.statusCode||null,addressbook_error:address.error?.message||address.error||null,invoice_operations:invoice.operations||[],addressbook_wsdl:String(address.body||'').slice(0,500000)}}];"
+      }
     }
   ],
   "connections": {
@@ -435,6 +497,39 @@
           }
         ]
       ]
+    },
+    "Servis tanımını doğrula": {
+      "main": [
+        [
+          {
+            "node": "İşNet · Sunucu çıkış IP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "İşNet · Sunucu çıkış IP": {
+      "main": [
+        [
+          {
+            "node": "İşNet · Adres defteri erişimi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "İşNet · Adres defteri erişimi": {
+      "main": [
+        [
+          {
+            "node": "İşNet · Bağlantı teşhisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "nodeGroups": [
@@ -463,6 +558,16 @@
         "Fatura · Panele yanıt"
       ],
       "description": "Tamamlanan siparişin test taslağını ve bağlantı sonucunu Supabase'e kaydeder."
+    },
+    {
+      "id": "a98a48cc-abd9-4d36-b47a-ece69f937b74",
+      "name": "İşNet erişim teşhisi",
+      "nodeNames": [
+        "İşNet · Sunucu çıkış IP",
+        "İşNet · Adres defteri erişimi",
+        "İşNet · Bağlantı teşhisi"
+      ],
+      "description": "Sunucu çıkış IP'sini ve ikinci test servisinin erişimini kontrol eder."
     }
   ],
   "settings": {
