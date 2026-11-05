@@ -434,10 +434,10 @@
   function exportExcel(){
     if(!lastRows.length){ alert("Dışa aktarılacak veri yok"); return; }
 
-    const headers = ["No","İsim","Tutar","Durum","Tarih","Sipariş Alan"];
+    const headers = ["No","İsim","Parça adedi","Tutar","Durum","Tarih","Sipariş Alan"];
 
     const rows = lastRows.map(r=>[
-      r.siparis_no, r.ad_soyad, r.toplam_tutar,
+      r.siparis_no, r.ad_soyad, reportParcels(r.kargo_adet), r.toplam_tutar,
       r.kargo_durumu, (r.tarih||"").substring(0,19),
       takerLabel(r)
     ]);
