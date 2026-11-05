@@ -1,0 +1,578 @@
+[
+  {
+    "kind": "columns",
+    "data": [
+      {
+        "col": "siparis_no",
+        "type": "integer",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "siparis_tel",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "ad_soyad",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "musteri_tel",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "adres",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "urun_bilgisi",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "sehir",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "toplam_tutar",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "odeme_sekli",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "notlar",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "tarih",
+        "type": "timestamp without time zone",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "musteri_no",
+        "type": "smallint",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "firma",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "siparis_alan",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "ilce",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "kargo_durumu",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "orderinvoiceid",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "orderinvoicedetailid",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "shipperbranchcode",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "kargo_adet",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "sehir_kodu",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "ilce_kodu",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "kargo_siparis_no",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "kargo_takip_kodu",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "kargo_qr_kod",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "invoiceid",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "kargo_kg",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "zpl_base64",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "print",
+        "type": "boolean",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "iptal_nedeni",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "iptal_tarihi",
+        "type": "timestamp without time zone",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "shipmentStatus",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "kargo_takip_url",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "kargo_gunc_saat",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "teslimat_aciklama",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "gonder_hata_bilgisi",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "shipmentStatusCode",
+        "type": "smallint",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "secilen_urunler",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "isDelivered",
+        "type": "boolean",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "kargo_api_yanit",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "kargo_zpl",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "iade_kodu",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "iade_etiket_url",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "iade_durumu",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "iade_tarihi",
+        "type": "timestamp with time zone",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "subeden_teslim",
+        "type": "boolean",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "teslim_subesi",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "teslim_sekli_kontrol",
+        "type": "boolean",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "etiket_yazdirma_sayisi",
+        "type": "integer",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "etiket_son_yazdirma",
+        "type": "timestamp with time zone",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "etiket_olusturma_tarihi",
+        "type": "timestamp with time zone",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "sube_etiket_durumu",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "sube_etiket_tarihi",
+        "type": "timestamp with time zone",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "bolunme_grubu",
+        "type": "uuid",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "bolunme_ana_siparis_no",
+        "type": "integer",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "bolunme_sira",
+        "type": "smallint",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "iade_takip_kodu",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "iade_teslim_tarihi",
+        "type": "timestamp with time zone",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "iade_son_kontrol",
+        "type": "timestamp with time zone",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "iade_hareketleri",
+        "type": "jsonb",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "iade_takip_hatasi",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "dekont_gecmis_onayli",
+        "type": "boolean",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "sistem_notu",
+        "type": "text",
+        "table": "gazi_siparisler"
+      },
+      {
+        "col": "siparis_no",
+        "type": "integer",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "siparis_tel",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "ad_soyad",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "musteri_tel",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "adres",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "urun_bilgisi",
+        "type": "character varying",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "sehir",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "toplam_tutar",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "odeme_sekli",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "notlar",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "tarih",
+        "type": "timestamp without time zone",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "musteri_no",
+        "type": "smallint",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "firma",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "siparis_alan",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "ilce",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "kargo_durumu",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "orderInvoiceId",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "orderInvoiceDetailId",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "shipperBranchCode",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "kargo_adet",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "sehir_kodu",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "ilce_kodu",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "kargo_siparis_no",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "kargo_takip_kodu",
+        "type": "character varying",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "kargo_qr_kod",
+        "type": "character varying",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "invoiceId",
+        "type": "character varying",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "referenceId",
+        "type": "character varying",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "kargo_kg",
+        "type": "character varying",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "zpl_base64",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "print",
+        "type": "boolean",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "iptal_nedeni",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "iptal_tarihi",
+        "type": "timestamp without time zone",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "siparis_sekli",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "secilen_urunler",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "musteri_notu",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "whatsapp_jid",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "whatsapp_message_id",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "whatsapp_participant",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "whatsapp_participant_alt",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "whatsapp_addressing_mode",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "whatsapp_from_me",
+        "type": "boolean",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "whatsapp_push_name",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "whatsapp_message_text",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "siparis_durumu",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "isleme_alinma_tarihi",
+        "type": "timestamp without time zone",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "subeden_teslim",
+        "type": "boolean",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "teslim_subesi",
+        "type": "text",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "teslim_sekli_kontrol",
+        "type": "boolean",
+        "table": "tum_siparisler"
+      },
+      {
+        "col": "sistem_notu",
+        "type": "text",
+        "table": "tum_siparisler"
+      }
+    ]
+  },
+  {
+    "kind": "triggers",
+    "data": [
+      {
+        "fn": "sync_gazi_order_to_master",
+        "def": "CREATE TRIGGER trg_sync_gazi_order_to_master AFTER UPDATE ON public.gazi_siparisler FOR EACH ROW EXECUTE FUNCTION sync_gazi_order_to_master()",
+        "body": "CREATE OR REPLACE FUNCTION public.sync_gazi_order_to_master()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  update public.tum_siparisler\n  set subeden_teslim=new.subeden_teslim,teslim_subesi=new.teslim_subesi,teslim_sekli_kontrol=new.teslim_sekli_kontrol,siparis_tel=new.siparis_tel, ad_soyad=new.ad_soyad, musteri_tel=new.musteri_tel,\n      adres=new.adres, urun_bilgisi=new.urun_bilgisi, sehir=new.sehir,\n      toplam_tutar=new.toplam_tutar, odeme_sekli=new.odeme_sekli, notlar=new.notlar,\n      firma=new.firma, siparis_alan=new.siparis_alan, ilce=new.ilce,\n      kargo_durumu=new.kargo_durumu, kargo_adet=new.kargo_adet,\n      sehir_kodu=new.sehir_kodu, ilce_kodu=new.ilce_kodu,\n      kargo_siparis_no=new.kargo_siparis_no, kargo_takip_kodu=new.kargo_takip_kodu,\n      kargo_qr_kod=new.kargo_qr_kod, \"invoiceId\"=new.invoiceid,\n      kargo_kg=new.kargo_kg, zpl_base64=new.zpl_base64, print=new.print,\n      iptal_nedeni=new.iptal_nedeni, iptal_tarihi=new.iptal_tarihi,\n      secilen_urunler=new.secilen_urunler\n  where siparis_no=new.siparis_no;\n  return new;\nend;\n$function$\n",
+        "table": "gazi_siparisler"
+      }
+    ]
+  }
+]
