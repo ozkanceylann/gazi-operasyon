@@ -1702,6 +1702,7 @@ ${missingOperationNavigation()}
  ${d.sistem_notu?`<div class="detail-group detail-system-note"><div class="detail-title">Sistem notu</div><div class="note-text">${escapeHtml(d.sistem_notu)}</div></div>`:""}
 </div>
 ${OrderReceipts.markup(d)}
+${OrderInvoices.markup(d,{isAdmin:isGaziAdmin,table:TABLE})}
 ${extraSlot(d,'noteDetail')}
 ${extraSlot(d,'history')}
 ${renderOriginalMessage(d)}
@@ -1710,6 +1711,7 @@ ${renderOriginalMessage(d)}
   document.getElementById("orderDetails").insertAdjacentHTML("beforeend",renderCargoTracking(d) + renderReturnMovements(d) + renderReturnDetail(d));
   bindOriginalMessage(d);
   OrderReceipts.mount(db,d,document.getElementById("orderDetails"),()=>loadOrders(true));
+  OrderInvoices.mount(db,d,document.getElementById("orderDetails"),{isAdmin:isGaziAdmin,table:TABLE,publicKey:SUPABASE_KEY});
   /* ============================================================
       1) SOR BUTONU — SADECE Bekliyor & Hazırlandı
   ============================================================ */
@@ -3159,4 +3161,5 @@ document.addEventListener("click", event => {
   dialog.showModal();
   close.focus();
 }, true);
+
 

@@ -1,0 +1,25 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const window={};let requests=0,resolveFetch;
+const context={window,URLSearchParams,AbortController,setTimeout,clearTimeout,fetch:async()=>{requests++;return await new Promise(resolve=>resolveFetch=()=>resolve({ok:true,text:async()=>JSON.stringify({success:true,ortam:'test',issued:false,message:'Test taslağı kaydedildi.'})}));}};
+vm.runInNewContext(fs.readFileSync(__dirname+'/../order-invoices.js','utf8'),context);
+const api=window.OrderInvoices,options={isAdmin:true,table:'gazi_siparisler',publicKey:'public'};
+for(const state of ['Bekliyor','Hazırlandı','Kargolandı','İptal','Silindi','İade'])assert.equal(api.eligible({kargo_durumu:state},options),false);
+assert.equal(api.eligible({kargo_durumu:'Tamamlandı'},options),true);
+assert.equal(api.eligible({kargo_durumu:'Kargolandı',shipmentStatusCode:5},options),true);
+assert.equal(api.eligible({kargo_durumu:'İade',isDelivered:true},options),false);
+assert.equal(api.eligible({kargo_durumu:'Tamamlandı'},{...options,isAdmin:false}),false);
+assert.equal(api.eligible({kargo_durumu:'Tamamlandı'},{...options,table:'queen_siparisler'}),false);
+const order={siparis_no:123,kargo_durumu:'Tamamlandı'},open={},panel={hidden:true},run={},status={};
+const parts={'[data-invoice-open]':open,'[data-invoice-panel]':panel,'[data-invoice-test]':run,'[data-invoice-status]':status};
+const section={querySelector:s=>parts[s]};const container={querySelector:()=>section};
+let session={access_token:'test-token'};
+const query={select:()=>query,eq:()=>query,neq:()=>query,maybeSingle:async()=>({data:null})};
+const db={from:()=>query,auth:{getSession:async()=>({data:{session}})}};
+(async()=>{
+ api.mount(db,order,container,options);await open.onclick();assert.equal(panel.hidden,false);
+ assert.match(status.textContent,/Henüz/);
+ const work=run.onclick();await new Promise(r=>setImmediate(r));assert.equal(run.disabled,true);await run.onclick();assert.equal(requests,1);
+ resolveFetch();await work;assert.equal(run.disabled,false);assert.match(status.textContent,/kaydedildi/);
+ session=null;await run.onclick();assert.equal(requests,1);assert.match(status.textContent,/Oturum/);
+ console.log('PASS: completed/admin gating, no returned orders, test draft panel, duplicate-click lock, result text, expired-session guard');
+})().catch(e=>{console.error(e);process.exit(1)});

@@ -1,7 +1,7 @@
 // ================================
 // 🔥 VERSION = DEPLOY TARİHİ
 // ================================
-const VERSION = "20261105-delete-id-fix-180";
+const VERSION = "20261105-isnet-test-181";
 const CACHE_NAME = `siparis-app-${VERSION}`;
 
 // Cache edilecek dosyalar
@@ -27,6 +27,7 @@ const ASSETS = [
   "/order-split.css",
   "/customer-order-history.js",
   "/order-receipts.js",
+  "/order-invoices.js",
   "/shipping-approval.js",
   "/shipping-approval.css",
   "/order-receipts.css",

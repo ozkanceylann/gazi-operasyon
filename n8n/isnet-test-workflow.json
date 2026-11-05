@@ -1,0 +1,477 @@
+{
+  "name": "GAZI_FATURA_ISNET_TEST",
+  "nodes": [
+    {
+      "id": "58328671-87a4-49cc-b92f-011cf5c96f8f",
+      "name": "Test servisini kontrol et",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "cb36a46a-a22a-4c83-b6a9-355e2348318a",
+      "name": "İşNet test ayarlarını oku",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        272,
+        128
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "eoWbljJNPuN3GG9K"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "ortam",
+              "condition": "eq",
+              "keyValue": "test"
+            }
+          ]
+        },
+        "limit": 1
+      }
+    },
+    {
+      "id": "7a6bc43a-5421-4787-b2a3-67737749fedc",
+      "name": "İşNet WSDL bağlantı testi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        496,
+        128
+      ],
+      "parameters": {
+        "url": "={{ $json.invoice_service_url + '?wsdl' }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "1275188e-ae85-4c10-821f-dc0d121bc549",
+      "name": "Servis tanımını doğrula",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        128
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r=$input.first().json;const xml=String(r.body||r.data||'');return [{json:{success:r.statusCode===200&&/definitions|InvoiceService/.test(xml),statusCode:r.statusCode,wsdl:xml,operations:[...new Set([...xml.matchAll(/operation[^>]+name=[\\\"']([^\\\"']+)/g)].map(x=>x[1]))]}}];"
+      }
+    },
+    {
+      "id": "6da11470-1475-4d71-bbd9-d5d234c15dcb",
+      "name": "Fatura · Panel isteği",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        480
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gazi-isnet-fatura-test",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "webhookId": "d95e42cc-b346-4219-8ef9-ecc82cef6199"
+    },
+    {
+      "id": "0fa78233-815c-4722-83d2-95f6f81deb60",
+      "name": "Fatura · Oturumu doğrula",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        250,
+        480
+      ],
+      "parameters": {
+        "url": "https://jarsxtpqzqzhlshpmgot.supabase.co/auth/v1/user",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $json.body?.publicKey || '' }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.body?.accessToken || '' }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "5d8b4fb6-df35-4c9c-939c-e6c57c4c621c",
+      "name": "Fatura · Yönetici ve girdi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        480
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r=$input.first().json;const b=$('Fatura · Panel isteği').first().json.body||{};const m=r.body?.app_metadata||{};if(r.statusCode!==200||!r.body?.id||m.firma!=='gazi'||m.role==='seller')throw Error('Gazi yönetici oturumu gerekli.');const id=Number(b.siparis_no);if(!Number.isSafeInteger(id)||id<1)throw Error('Geçerli sipariş seçin.');if(b.ortam!=='test')throw Error('Yalnızca test ortamı kullanılabilir.');return [{json:{p_siparis_no:id,p_actor:r.body.id}}];"
+      }
+    },
+    {
+      "id": "88c27323-a2fd-4fce-ad35-9dcb9cda51f9",
+      "name": "Fatura · Test taslağını kaydet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        750,
+        480
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://jarsxtpqzqzhlshpmgot.supabase.co/rest/v1/rpc/gazi_fatura_test_hazirla",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "BBA8YSbXFzA6xcvt",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "id": "6ab82736-2b77-4097-95f6-7482efefbc29",
+      "name": "Fatura · Data Tables test ayarları",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        480
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "eoWbljJNPuN3GG9K"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "ortam",
+              "condition": "eq",
+              "keyValue": "test"
+            }
+          ]
+        },
+        "limit": 1
+      }
+    },
+    {
+      "id": "67b2c103-62a0-4d55-9bfc-ea26eeffd536",
+      "name": "Fatura · Test ortamı kontrolü",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1250,
+        480
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const c=$input.first().json;if(c.ortam!=='test'||c.aktif!==true||c.invoice_service_url!=='https://einvoiceservicetest.isnet.net.tr/InvoiceService/ServiceContract/InvoiceService.svc')throw Error('İşNet test ayarlarını kontrol edin.');return [{json:{invoice_service_url:c.invoice_service_url,firma_vkn:c.firma_vkn,kimlik_dogrulama:c.kimlik_dogrulama}}];"
+      }
+    },
+    {
+      "id": "c6374994-74f0-4561-9377-f66d7be2d9b3",
+      "name": "Fatura · İşNet test servisi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1500,
+        480
+      ],
+      "parameters": {
+        "url": "={{ $json.invoice_service_url + '?wsdl' }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "834ed61c-af88-487d-964f-8871f9a9f43a",
+      "name": "Fatura · Test sonucunu hazırla",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1750,
+        480
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r=$input.first().json;const text=String(r.body||r.data||'');const ok=r.statusCode===200&&/<(?:\\w+:)?definitions\\b/i.test(text);return [{json:{p_fatura_id:$('Fatura · Test taslağını kaydet').first().json.fatura_id,p_sonuc:{ortam:'test',islem:'wsdl_baglanti',baglanti_basarili:ok,http_durumu:r.statusCode||null,hata:r.error?String(r.error.message||r.error).slice(0,1000):null,belge_gonderildi:false,checked_at:new Date().toISOString()}}}];"
+      }
+    },
+    {
+      "id": "3414920c-baed-415d-8fcb-277e27ab6559",
+      "name": "Fatura · Test sonucunu kaydet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2000,
+        480
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://jarsxtpqzqzhlshpmgot.supabase.co/rest/v1/rpc/gazi_fatura_test_sonuc",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "BBA8YSbXFzA6xcvt",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "id": "a950fa69-6e0a-484d-969b-f84c897960f6",
+      "name": "Fatura · Panele yanıt",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2250,
+        480
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Test servisini kontrol et": {
+      "main": [
+        [
+          {
+            "node": "İşNet test ayarlarını oku",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "İşNet test ayarlarını oku": {
+      "main": [
+        [
+          {
+            "node": "İşNet WSDL bağlantı testi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "İşNet WSDL bağlantı testi": {
+      "main": [
+        [
+          {
+            "node": "Servis tanımını doğrula",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fatura · Panel isteği": {
+      "main": [
+        [
+          {
+            "node": "Fatura · Oturumu doğrula",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fatura · Oturumu doğrula": {
+      "main": [
+        [
+          {
+            "node": "Fatura · Yönetici ve girdi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fatura · Yönetici ve girdi": {
+      "main": [
+        [
+          {
+            "node": "Fatura · Test taslağını kaydet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fatura · Test taslağını kaydet": {
+      "main": [
+        [
+          {
+            "node": "Fatura · Data Tables test ayarları",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fatura · Data Tables test ayarları": {
+      "main": [
+        [
+          {
+            "node": "Fatura · Test ortamı kontrolü",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fatura · Test ortamı kontrolü": {
+      "main": [
+        [
+          {
+            "node": "Fatura · İşNet test servisi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fatura · İşNet test servisi": {
+      "main": [
+        [
+          {
+            "node": "Fatura · Test sonucunu hazırla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fatura · Test sonucunu hazırla": {
+      "main": [
+        [
+          {
+            "node": "Fatura · Test sonucunu kaydet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fatura · Test sonucunu kaydet": {
+      "main": [
+        [
+          {
+            "node": "Fatura · Panele yanıt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodeGroups": [
+    {
+      "id": "95208e96-eb88-4e24-a529-9e11e70882a2",
+      "name": "İşNet test bağlantısı",
+      "nodeNames": [
+        "İşNet test ayarlarını oku",
+        "İşNet WSDL bağlantı testi",
+        "Servis tanımını doğrula"
+      ],
+      "description": "Data Tables ayarlarıyla test servis tanımını sorgular; fatura oluşturmaz."
+    },
+    {
+      "id": "ef964c24-db4e-497e-bc8e-f9d5adca201c",
+      "name": "Fatura test taslağı ve İşNet bağlantısı",
+      "nodeNames": [
+        "Fatura · Oturumu doğrula",
+        "Fatura · Yönetici ve girdi",
+        "Fatura · Test taslağını kaydet",
+        "Fatura · Data Tables test ayarları",
+        "Fatura · Test ortamı kontrolü",
+        "Fatura · İşNet test servisi",
+        "Fatura · Test sonucunu hazırla",
+        "Fatura · Test sonucunu kaydet",
+        "Fatura · Panele yanıt"
+      ],
+      "description": "Tamamlanan siparişin test taslağını ve bağlantı sonucunu Supabase'e kaydeder."
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timezone": "Europe/Istanbul",
+    "saveManualExecutions": false,
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "executionTimeout": 90
+  }
+}
