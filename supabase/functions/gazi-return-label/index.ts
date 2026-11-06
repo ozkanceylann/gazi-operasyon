@@ -37,7 +37,9 @@ export function returnPayload(o:any,reference:string) {
   const phone=String(o.musteri_tel||'').replace(/\D/g,'').replace(/^90/,'').replace(/^0/,'');
   if(!/^5\d{9}$/.test(phone))throw Error('Müşteri telefonu geçersiz');
   const city=Number(o.sehir_kodu),district=Number(o.ilce_kodu),count=Number(o.kargo_adet||1);
-  if(!Number.isSafeInteger(city)||city<1||!Number.isSafeInteger(district)||district<1)throw Error('Şehir/ilçe kodları eksik veya geçersiz');
+  const districtCode=String(o.ilce_kodu??'').trim();
+  // DHL uses 00 for central districts; a missing code must still be rejected.
+  if(!Number.isSafeInteger(city)||city<1||!/^\d+$/.test(districtCode)||!Number.isSafeInteger(district)||district<0)throw Error('Şehir/ilçe kodları eksik veya geçersiz');
   if(!Number.isSafeInteger(count)||count<1||count>100)throw Error('Paket adedi geçersiz');
   const weights=parseCargoWeights(o.kargo_kg,count);
   const content=String(o.urun_bilgisi||'').trim();if(!content)throw Error('Ürün bilgisi eksik');
@@ -64,20 +66,32 @@ Deno.serve(async(req:Request)=>{
     if(!Number.isSafeInteger(id)||id<1)return reply({message:'Sipariş numarası geçersiz'},400);
     const c=await rpc('begin',id!);locked=!c.existing;
     if(c.existing)return reply({success:true,environment:'production',already_created:true,reference:c.reference,url:c.url});
-    const payload=returnPayload(c.order,c.reference);
     if(c.gateway.url!=='https://n8n.ozkanceylan.uk/webhook/gazi_iade_olustur')throw Error('DHL geçit adresi geçersiz');
-    submitted=true;
-    const response=await fetch(c.gateway.url,{method:'POST',redirect:'error',
-      headers:{'Content-Type':'application/json','x-gazi-return-key':c.gateway.key},
-      body:JSON.stringify({path:'standardcmdapi/createReturnOrder',method:'POST',body:payload}),signal:AbortSignal.timeout(55000)});
-    const result=await response.json(),dhl=Array.isArray(result.data)?result.data[0]:result.data;
-    if(!response.ok||result.status!==200||!dhl?.orderInvoiceId||dhl.referenceId!==c.reference){
+    let reference=String(c.reference);
+    for(let attempt=0;attempt<10;attempt++){
+      submitted=false;
+      definiteFailure=false;
+      const payload=returnPayload(c.order,reference);
+      submitted=true;
+      const response=await fetch(c.gateway.url,{method:'POST',redirect:'error',
+        headers:{'Content-Type':'application/json','x-gazi-return-key':c.gateway.key},
+        body:JSON.stringify({path:'standardcmdapi/createReturnOrder',method:'POST',body:payload}),signal:AbortSignal.timeout(55000)});
+      const result=await response.json(),dhl=Array.isArray(result.data)?result.data[0]:result.data;
+      if(response.ok&&result.status===200&&dhl?.orderInvoiceId&&dhl.referenceId===reference){
+        const saved=await rpc('finish',id!,{reference,url:dhl.returnOrderLabelURL,response:dhl});
+        locked=false;
+        return reply({success:true,environment:'production',reference:saved.reference,url:saved.url});
+      }
       const message=String(dhl?.error?.Description||dhl?.error?.Message||dhl?.message||dhl?.title||'DHL iade işlemi tamamlanamadı');
-      definiteFailure=result.status>=400&&result.status<500&&!/mevcut|already|duplicate/i.test(message);
-      throw Error(message);
+      const duplicate=response.ok&&!dhl?.orderInvoiceId&&(
+        result.status===409||/already exists|duplicate|mükerrer|(?:referans|barkod|reference|barcode).{0,100}(?:mevcut|kullanılm[ıi]ş|kayıtlı)/iu.test(message)
+      );
+      definiteFailure=duplicate||(result.status>=400&&result.status<500&&!/mevcut|already|duplicate/i.test(message));
+      if(!duplicate||!/^GZ(?:-\d+|\d+R[1-9]\d*)$/.test(reference))throw Error(message);
+      const next=await rpc('duplicate',id!,{reference});
+      reference=next.reference;
     }
-    const saved=await rpc('finish',id!,{reference:c.reference,url:dhl.returnOrderLabelURL,response:dhl});
-    locked=false;return reply({success:true,environment:'production',reference:saved.reference,url:saved.url});
+    throw Error('DHL iade kodları dolu. Tekrar deneyin.');
   } catch(e) {
     const message=e instanceof Error?e.message:'İade oluşturulamadı';
     if(locked&&id)try{await rpc(submitted&&!definiteFailure?'uncertain':'failed',id,{error:message});}catch{}
