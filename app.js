@@ -2310,11 +2310,16 @@ async function createAllMissingLabels(){
     bulkLabelStatus('Etiketi oluşmamış siparişler bulunuyor…');
     const ids=await bulkLabelIds('create');
     if(!ids.length){bulkLabelStatus('Etiketi oluşturulacak uygun sipariş bulunamadı.');return;}
-    for(let i=0;i<ids.length;i++){
-      bulkLabelStatus(i+' / '+ids.length+' siparişin etiketi oluşturuluyor…');
-      try{if(await createBulkLabel(ids[i]))created++;else skipped++;}
-      catch(error){errors.push({id:ids[i],message:error.message||'Etiket oluşturulamadı.'});}
-    }
+    const uniqueIds=[...new Set(ids)];let completed=0;
+    bulkLabelStatus('0 / '+uniqueIds.length+' sipariş tamamlandı · Tüm etiket işlemleri eş zamanlı başlatılıyor…');
+    await Promise.all(uniqueIds.map(async id=>{
+      try{if(await createBulkLabel(id))created++;else skipped++;}
+      catch(error){errors.push({id,message:error.message||'Etiket oluşturulamadı.'});}
+      finally{
+        completed++;
+        bulkLabelStatus(completed+' / '+uniqueIds.length+' sipariş tamamlandı · '+(uniqueIds.length-completed)+' işlem sürüyor…');
+      }
+    }));
     bulkLabelStatus(created+' siparişin etiketi oluşturuldu'+(skipped?' · '+skipped+' zaten oluşmuştu':'')+(errors.length?' · '+errors.length+' hata':'')+'. Yazdırmak için sağdaki butonu kullanın.');
     showBulkLabelErrors(errors);
     await loadOrders(true);
