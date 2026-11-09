@@ -67,6 +67,7 @@ declare
   total_kg numeric:=0; original_kg numeric; count_parts integer; ids integer[]:='{}';
   product_index integer; assignment integer[]:='{}'; group_number integer;
   child_id integer; original_snapshot jsonb;
+  insert_columns text; insert_values text;
 begin
   if auth.uid() is null or not public.seller_is_gazi_admin() then
     raise exception 'Sipariş bölme için Gazi yönetici oturumu gerekli.' using errcode='42501';
@@ -152,7 +153,18 @@ begin
     'print',false,'isDelivered',false,'subeden_teslim',original.subeden_teslim,'teslim_subesi',original.teslim_subesi,
     'teslim_sekli_kontrol',original.teslim_sekli_kontrol,'etiket_yazdirma_sayisi',0,
     'bolunme_grubu',p_request_id,'bolunme_ana_siparis_no',p_order_id,'bolunme_sira',2));
-  insert into public.gazi_siparisler overriding system value select (child).*;
+  -- Exclude GENERATED ALWAYS columns (e.g. dekont_gecmis_onayli).
+  -- They must be computed by Postgres, not copied from a composite row.
+  select string_agg(format('%I', a.attname), ', ' order by a.attnum),
+         string_agg(format('($1).%I', a.attname), ', ' order by a.attnum)
+    into insert_columns, insert_values
+    from pg_catalog.pg_attribute a
+   where a.attrelid = 'public.gazi_siparisler'::regclass
+     and a.attnum > 0 and not a.attisdropped and a.attgenerated = '';
+  execute format(
+    'insert into public.gazi_siparisler (%s) overriding system value select %s',
+    insert_columns, insert_values
+  ) using child;
   update public.gazi_siparisler set urun_bilgisi=products_a,toplam_tutar=amounts[1]::text,
     kargo_adet=p_parts->0->>'count',kargo_kg=p_parts->0->>'kg',kargo_durumu='Bekliyor',
     bolunme_grubu=p_request_id,bolunme_ana_siparis_no=p_order_id,bolunme_sira=1,
