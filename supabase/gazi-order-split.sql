@@ -160,7 +160,9 @@ begin
     into insert_columns, insert_values
     from pg_catalog.pg_attribute a
    where a.attrelid = 'public.gazi_siparisler'::regclass
-     and a.attnum > 0 and not a.attisdropped and a.attgenerated = '';
+     and a.attnum > 0 and not a.attisdropped and a.attgenerated = ''
+     -- A NULL composite-field value must not override the column DEFAULT.
+     and (not a.atthasdef or to_jsonb(child)->a.attname is distinct from 'null'::jsonb);
   execute format(
     'insert into public.gazi_siparisler (%s) overriding system value select %s',
     insert_columns, insert_values
