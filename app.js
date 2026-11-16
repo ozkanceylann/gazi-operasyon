@@ -1643,20 +1643,33 @@ function renderOriginalMessage(order) {
   </details>`;
 }
 
+function renderPreviousWhatsAppMessages(history) {
+  const entries = Array.isArray(history) ? history : [];
+  if (!entries.length) return "";
+  return '<div class="previous-whatsapp-messages" style="margin-top:12px;border-top:1px solid #ddd;padding-top:10px"><strong>Önceki Mesajlar (' + entries.length + ')</strong>' +
+    entries.map((entry, index) => {
+      const date = entry.degistirilme_tarihi || entry.kayit_tarihi;
+      const label = date && !Number.isNaN(Date.parse(date)) ? new Date(date).toLocaleString("tr-TR") : "Tarih belirtilmemiş";
+      return '<div style="margin-top:10px"><small>Önceki mesaj ' + (index + 1) + ' · ' + escapeHtml(label) + '</small><div class="original-message-text" style="white-space:pre-wrap;margin-top:4px">' + escapeHtml(entry.mesaj || "") + '</div></div>';
+    }).join("") + '</div>';
+}
 function bindOriginalMessage(order, panel = document.querySelector("#orderDetails .original-message")) {
   if (!panel) return;
   let loading = false;
   panel.addEventListener("toggle", async () => {
-    if (!panel.open || loading || order.whatsapp_message_text !== undefined) return;
+    if (!panel.open || loading || order.whatsapp_mesaj_gecmisi !== undefined) return;
     loading = true;
     const content = panel.querySelector(".original-message-text");
     content.textContent = "Orijinal mesaj yükleniyor…";
     try {
       const { data, error } = await db.from("tum_siparisler")
-        .select("whatsapp_message_text").eq("siparis_no", order.siparis_no).maybeSingle();
+        .select("whatsapp_message_text,whatsapp_mesaj_gecmisi").eq("siparis_no", order.siparis_no).maybeSingle();
       if (error) throw error;
       order.whatsapp_message_text = data?.whatsapp_message_text ?? null;
+      order.whatsapp_mesaj_gecmisi = data?.whatsapp_mesaj_gecmisi ?? [];
       content.textContent = order.whatsapp_message_text || "Bu siparişin orijinal mesajı kayıtlı değil.";
+      panel.querySelector(".previous-whatsapp-messages")?.remove();
+      content.insertAdjacentHTML("afterend", renderPreviousWhatsAppMessages(order.whatsapp_mesaj_gecmisi));
     } catch (error) {
       content.textContent = "Orijinal mesaj alınamadı. Bölümü kapatıp yeniden açarak tekrar deneyin.";
       console.error("Orijinal mesaj alınamadı:", error);
