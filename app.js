@@ -964,7 +964,7 @@ function returnImageUrl(reference,value){
 }
 function returnOrderActions(order){
   const url=returnLabelUrl(order.iade_etiket_url);
-  if(url)return `<div class="return-actions"><div class="return-action-buttons"><a class="btn-return-label" href="${escapeHtml(returnImageUrl(order.iade_kodu,url))}" data-return-image-preview target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">İade Fişini Aç</a></div><span class="return-code">${escapeHtml(order.iade_kodu)}</span></div>`;
+  if(url)return `<div class="return-actions"><div class="return-action-buttons"><a class="btn-return-label" href="${escapeHtml(returnImageUrl(order.iade_kodu,url))}" data-return-image-preview target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">İade Fişini Aç</a></div><span class="return-code">${escapeHtml(order.iade_kodu)}</span>${order.iade_parca_adet!=null&&Number.isSafeInteger(Number(order.iade_parca_adet))?`<span class="return-code">İade talebi: ${Number(order.iade_parca_adet)} paket</span>`:""}</div>`;
   if(currentTab==="tamamlandi" && (order.isDelivered===true||Number(order.shipmentStatusCode)===5))
     return `<button class="btn-return-label btn-return-label-create" type="button" onclick="event.stopPropagation(); createReturnLabel(${Number(order.siparis_no)}, this)">İADE Etiketi Oluştur</button>`;
   return `<span class="cargo-checked">Geri dönüş kargosu</span>`;
@@ -982,7 +982,7 @@ function renderReturnMovements(order){
 function renderReturnDetail(order){
   const url=returnLabelUrl(order.iade_etiket_url);
   if(!url)return "";
-  return `<div class="detail-group return-detail"><div class="detail-title">İade Fişi</div><p>İade kodu: <strong>${escapeHtml(order.iade_kodu)}</strong></p><p>${escapeHtml(returnStage(order))} · ${escapeHtml(formatDateTimeTR(order.iade_tarihi))}</p><div class="return-action-buttons return-detail-buttons"><a class="btn-return-label" href="${escapeHtml(returnImageUrl(order.iade_kodu,url))}" data-return-image-preview target="_blank" rel="noopener noreferrer">İade Fişini Aç</a>${returnCancelButton(order)}<button type="button" class="btn-return-label" data-return-url="${escapeHtml(url)}" onclick="copyReturnDetailLink(this)">Fiş Linkini Kopyala</button></div></div>`;
+  return `<div class="detail-group return-detail"><div class="detail-title">İade Fişi</div><p>İade kodu: <strong>${escapeHtml(order.iade_kodu)}</strong></p>${order.iade_parca_adet!=null&&Number.isSafeInteger(Number(order.iade_parca_adet))?`<p>Sistemde kayıtlı iade talebi: <strong>${Number(order.iade_parca_adet)} paket</strong></p>`:""}<p>${escapeHtml(returnStage(order))} · ${escapeHtml(formatDateTimeTR(order.iade_tarihi))}</p><div class="return-action-buttons return-detail-buttons"><a class="btn-return-label" href="${escapeHtml(returnImageUrl(order.iade_kodu,url))}" data-return-image-preview target="_blank" rel="noopener noreferrer">İade Fişini Aç</a>${returnCancelButton(order)}<button type="button" class="btn-return-label" data-return-url="${escapeHtml(url)}" onclick="copyReturnDetailLink(this)">Fiş Linkini Kopyala</button></div></div>`;
 }
 window.copyReturnDetailLink=async function(button){
   const url=returnLabelUrl(button.dataset.returnUrl);
@@ -999,7 +999,7 @@ function showReturnLabel(result){
   const url=returnLabelUrl(result.url);if(!url)throw new Error("İade fişi bağlantısı doğrulanamadı.");
   const root=document.getElementById("alertRoot"),wrap=document.createElement("div");
   wrap.className="alert-backdrop";
-  wrap.innerHTML=`<div class="alert-card return-result" role="dialog" aria-modal="true" aria-label="İade etiketi"><div class="alert-title">İade Etiketi Hazır</div><p>İade kodu: <strong>${escapeHtml(result.reference)}</strong></p><p>Müşteri bu kodla DHL şubesine başvurabilir. Kargo ücreti Gazi hesabına aittir.</p><a class="btn-return-label" href="${escapeHtml(returnImageUrl(result.reference,url))}" data-return-image-preview target="_blank" rel="noopener noreferrer">İade Fişini Aç</a><div class="alert-actions"><button class="btn-ghost" type="button" data-copy-return>Fiş Linkini Kopyala</button><button class="btn-brand" type="button" data-close-return>Kapat</button></div><p role="status" data-copy-status></p></div>`;
+  wrap.innerHTML=`<div class="alert-card return-result" role="dialog" aria-modal="true" aria-label="İade etiketi"><div class="alert-title">İade Etiketi Hazır</div><p>İade kodu: <strong>${escapeHtml(result.reference)}</strong></p>${result.iade_parca_adet!=null&&Number.isSafeInteger(Number(result.iade_parca_adet))?`<p>Sisteme kaydedilen iade talebi: <strong>${Number(result.iade_parca_adet)} paket</strong></p>`:""}<p>Müşteri bu kodla DHL şubesine başvurabilir. Kargo ücreti Gazi hesabına aittir.</p><a class="btn-return-label" href="${escapeHtml(returnImageUrl(result.reference,url))}" data-return-image-preview target="_blank" rel="noopener noreferrer">İade Fişini Aç</a><div class="alert-actions"><button class="btn-ghost" type="button" data-copy-return>Fiş Linkini Kopyala</button><button class="btn-brand" type="button" data-close-return>Kapat</button></div><p role="status" data-copy-status></p></div>`;
   root.appendChild(wrap);
   wrap.querySelector("[data-close-return]").onclick=()=>wrap.remove();
   wrap.querySelector("[data-copy-return]").onclick=async()=>{
@@ -1015,21 +1015,38 @@ async function createReturnLabel(id,button){
   try {
     const {data:order,error}=await db.from(TABLE).select("*").eq("siparis_no",id).single();
     if(error||!order)throw new Error("Sipariş okunamadı.");
-    if(returnLabelUrl(order.iade_etiket_url)){showReturnLabel({reference:order.iade_kodu,url:order.iade_etiket_url});return;}
-    const confirmed=await confirmModal({title:"İADE Etiketi Oluştur",text:`${id} numaralı sipariş için iade etiketi oluşturulsun mu?\nKargo ücreti Gazi hesabına yazılır.`,confirmText:"Etiketi Oluştur"});
-    if(!confirmed)return;
+    if(returnLabelUrl(order.iade_etiket_url)){showReturnLabel({reference:order.iade_kodu,url:order.iade_etiket_url,iade_parca_adet:order.iade_parca_adet});return;}
+    const sentPackageCount=Number(String(order.kargo_adet||"1").trim());
+    if(!Number.isSafeInteger(sentPackageCount)||sentPackageCount<1)throw new Error("Siparişin gönderilen paket adedi okunamadı.");
+    const requestedReturnCount=await chooseReturnPackageCount(sentPackageCount);
+    if(requestedReturnCount===null)return;
     if(button)button.textContent="İade etiketi hazırlanıyor…";
     const {data:session}=await db.auth.getSession();
     if(!session.session?.access_token)throw new Error("Panele yeniden giriş yapın.");
     const response=await fetch(SUPABASE_URL+"/functions/v1/gazi-return-label",{method:"POST",
       headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+session.session.access_token,"Content-Type":"application/json"},
-      body:JSON.stringify({siparis_no:id}),signal:AbortSignal.timeout(90000)});
+      body:JSON.stringify({siparis_no:id,iade_parca_adet:requestedReturnCount}),signal:AbortSignal.timeout(90000)});
     const result=await response.json();
     if(!response.ok||result.success!==true)throw new Error(result.message||"İade etiketi oluşturulamadı.");
     showReturnLabel(result);
     if(document.getElementById("searchInput").value.trim())await searchOrders();else await loadOrders(true);
   }catch(error){toast(error.name==="TimeoutError"?"İade isteğinin sonucu bekleniyor. Tekrar oluşturmadan önce kaydı kontrol edin.":error.message,10000);}
   finally{busy.iade.delete(id);if(button?.isConnected){button.disabled=false;button.textContent=buttonLabel;}}
+}
+
+function chooseReturnPackageCount(sentPackageCount){
+  return new Promise(resolve=>{
+    const root=document.getElementById("alertRoot"),wrap=document.createElement("div");
+    wrap.className="alert-backdrop";
+    const selectableCount=Math.min(sentPackageCount,100);
+    const options=Array.from({length:selectableCount},(_,i)=>`<option value="${i+1}"${i===selectableCount-1?" selected":""}>${i+1} paket</option>`).join("");
+    wrap.innerHTML=`<form class="alert-card" role="dialog" aria-modal="true" aria-label="İade paket adedi"><div class="alert-title">İade Talebi</div><div class="alert-text">Gönderilen ${sentPackageCount} paketten kaç tanesi için iade talebi var?<br>Bu sayı Gazi sistemine kaydedilir; DHL fişindeki paket adedi değişmez.</div><label for="returnPackageCount">İade paket adedi</label><select id="returnPackageCount" name="count" style="width:100%;box-sizing:border-box;padding:12px;margin:8px 0 16px">${options}</select><div class="alert-actions"><button class="btn-ghost" type="button" data-cancel-return>Vazgeç</button><button class="btn-brand" type="submit">İade Fişini Oluştur</button></div></form>`;
+    root.appendChild(wrap);
+    const finish=value=>{wrap.remove();resolve(value);};
+    wrap.querySelector("[data-cancel-return]").onclick=()=>finish(null);
+    wrap.querySelector("form").onsubmit=event=>{event.preventDefault();finish(Number(wrap.querySelector("select").value));};
+    wrap.querySelector("select").focus();
+  });
 }
 
 window.linkBranchShipment=async function(id){

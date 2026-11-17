@@ -17,7 +17,7 @@ assert.equal(returnPayload({...order,kargo_adet:'2',kargo_kg:'5+10'},'REF').orde
 assert.deepEqual(returnPayload({...order,kargo_adet:'4',kargo_kg:'5+10+5+6'},'REF').orderPieceList.map(p=>p.kg),[5,10,5,6]);
 assert.deepEqual(returnPayload({...order,kargo_adet:'4',kargo_kg:'5,10,5,6'},'REF').orderPieceList.map(p=>p.kg),[5,10,5,6]);
 assert.throws(()=>returnPayload({...order,kargo_adet:'2',kargo_kg:'5++10'},'REF'));
-const request=()=>new Request('https://edge.example',{method:'POST',headers:{authorization:'Bearer user','Content-Type':'application/json'},body:JSON.stringify({siparis_no:9319})});
+const request=()=>new Request('https://edge.example',{method:'POST',headers:{authorization:'Bearer user','Content-Type':'application/json'},body:JSON.stringify({siparis_no:9319,iade_parca_adet:1})});
 let externalCalls=0,operations=[];
 globalThis.fetch=async(url,options)=>{
   if(url.endsWith('/auth/v1/user'))return Response.json({id:'admin',app_metadata:{firma:'gazi'}});

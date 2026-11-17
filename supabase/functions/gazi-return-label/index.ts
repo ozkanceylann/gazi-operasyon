@@ -64,8 +64,10 @@ Deno.serve(async(req:Request)=>{
     if(user.app_metadata?.firma!=='gazi'||user.app_metadata?.role==='seller')return reply({message:'Gazi yönetici yetkisi gerekli'},403);
     const input=await req.json();id=Number(input.siparis_no);
     if(!Number.isSafeInteger(id)||id<1)return reply({message:'Sipariş numarası geçersiz'},400);
-    const c=await rpc('begin',id!);locked=!c.existing;
-    if(c.existing)return reply({success:true,environment:'production',already_created:true,reference:c.reference,url:c.url});
+    const returnParcelCount=input.iade_parca_adet==null?null:Number(input.iade_parca_adet);
+    if(returnParcelCount!==null&&(!Number.isSafeInteger(returnParcelCount)||returnParcelCount<1||returnParcelCount>100))return reply({message:'İade paket adedi geçersiz'},400);
+    const c=await rpc('begin',id!,returnParcelCount===null?{}:{iade_parca_adet:returnParcelCount});locked=!c.existing;
+    if(c.existing)return reply({success:true,environment:'production',already_created:true,reference:c.reference,url:c.url,iade_parca_adet:c.iade_parca_adet});
     if(c.gateway.url!=='https://n8n.ozkanceylan.uk/webhook/gazi_iade_olustur')throw Error('DHL geçit adresi geçersiz');
     let reference=String(c.reference);
     for(let attempt=0;attempt<10;attempt++){
@@ -80,7 +82,7 @@ Deno.serve(async(req:Request)=>{
       if(response.ok&&result.status===200&&dhl?.orderInvoiceId&&dhl.referenceId===reference){
         const saved=await rpc('finish',id!,{reference,url:dhl.returnOrderLabelURL,response:dhl});
         locked=false;
-        return reply({success:true,environment:'production',reference:saved.reference,url:saved.url});
+        return reply({success:true,environment:'production',reference:saved.reference,url:saved.url,iade_parca_adet:saved.iade_parca_adet});
       }
       const message=String(dhl?.error?.Description||dhl?.error?.Message||dhl?.message||dhl?.title||'DHL iade işlemi tamamlanamadı');
       const duplicate=response.ok&&!dhl?.orderInvoiceId&&(
