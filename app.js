@@ -209,7 +209,7 @@ let listRequest = 0;
 let listLoading = false;
 function applyTabFilter(q, tab=currentTab, operation=operationFilter, allCargo=false) {
   if(allCargo)return q.or("kargo_durumu.eq.Kargolandı,kargo_durumu.eq.Tamamlandı,isDelivered.eq.true,shipmentStatusCode.gt.0,kargo_takip_kodu.not.is.null,iade_kodu.not.is.null,and(shipmentStatus.not.is.null,shipmentStatus.neq.)");
-  if(tab==="web") q=q.ilike("sistem_notu","%WEB-SIPARIS:%");
+  if(tab==="web") q=q.eq("siparis_alan","Web Sitesi");
   if(tab==="bekleyen")   q = q.eq("kargo_durumu","Bekliyor");
   if(tab==="hazirlandi") q = q.eq("kargo_durumu","Hazırlandı");
   const deliveredFilter = "shipmentStatusCode.eq.5,isDelivered.eq.true,shipmentStatus.eq.Teslim_Edildi,shipmentStatus.eq.Teslim Edildi";
@@ -869,7 +869,7 @@ tr.addEventListener("click", (e)=>{
 });
 
 
-if(String(o.sistem_notu||"").includes("WEB-SIPARIS:")){tr.classList.add("order-web-source");tr.querySelectorAll("td").forEach(td=>td.style.backgroundColor="#e8f5e9");}
+if(o.siparis_alan==="Web Sitesi"){tr.classList.add("order-web-source");tr.querySelectorAll("td").forEach(td=>td.style.backgroundColor="#e8f5e9");}
 tbody.appendChild(tr);
 });
 
