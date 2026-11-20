@@ -3093,7 +3093,7 @@ async function openWebOrders(){
   const esc=value=>escapeHtml(value==null?"":String(value));
   tbody.innerHTML=rows.map(order=>{
     const when=order.created_at?new Date(order.created_at).toLocaleString("tr-TR"):"";
-    const phone=String(order.telefon||"").replace(/\\D/g,"");
+    const phone=String(order.telefon||"").replace(/\D/g,"");
     const contact=phone?'<a href="https://wa.me/'+encodeURIComponent(phone)+'" target="_blank" rel="noopener">'+esc(order.telefon)+'</a>':"";
     const total=Number(order.toplam_tutar||0).toLocaleString("tr-TR")+" TL";
     const status=order.gazi_siparis_no?"Gazi #"+esc(order.gazi_siparis_no):esc(order.durum||"Yeni");
