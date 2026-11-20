@@ -94,8 +94,8 @@ function renderTableHeader(){
   if(!head) return;
 
   head.closest("table")?.classList.toggle("orders-table--prepared", currentTab === "hazirlandi");
-  head.closest("table")?.classList.toggle("orders-table--pending", currentTab === "bekleyen");
-  head.innerHTML = currentTab === "bekleyen"
+  head.closest("table")?.classList.toggle("orders-table--pending", ["bekleyen","web"].includes(currentTab));
+  head.innerHTML = ["bekleyen","web"].includes(currentTab)
   ? `
     <th>S.No</th>
     <th>Hazırla</th>
@@ -209,6 +209,7 @@ let listRequest = 0;
 let listLoading = false;
 function applyTabFilter(q, tab=currentTab, operation=operationFilter, allCargo=false) {
   if(allCargo)return q.or("kargo_durumu.eq.Kargolandı,kargo_durumu.eq.Tamamlandı,isDelivered.eq.true,shipmentStatusCode.gt.0,kargo_takip_kodu.not.is.null,iade_kodu.not.is.null,and(shipmentStatus.not.is.null,shipmentStatus.neq.)");
+  if(tab==="web") q=q.ilike("sistem_notu","%WEB-SIPARIS:%");
   if(tab==="bekleyen")   q = q.eq("kargo_durumu","Bekliyor");
   if(tab==="hazirlandi") q = q.eq("kargo_durumu","Hazırlandı");
   const deliveredFilter = "shipmentStatusCode.eq.5,isDelivered.eq.true,shipmentStatus.eq.Teslim_Edildi,shipmentStatus.eq.Teslim Edildi";
@@ -767,7 +768,7 @@ function renderTable(rows, { append=false, hasMore } = {}){
 
     const isTrackingTab = ["kargolandi", "tamamlandi", "sorunlu", "iade"].includes(currentTab);
 
-    const isPendingTab = currentTab === "bekleyen";
+    const isPendingTab = ["bekleyen","web"].includes(currentTab);
 
   const isPreparedTab = currentTab === "hazirlandi";
   const retryLabel = false;
@@ -868,6 +869,7 @@ tr.addEventListener("click", (e)=>{
 });
 
 
+if(String(o.sistem_notu||"").includes("WEB-SIPARIS:")){tr.classList.add("order-web-source");tr.querySelectorAll("td").forEach(td=>td.style.backgroundColor="#e8f5e9");}
 tbody.appendChild(tr);
 });
 
@@ -2912,7 +2914,7 @@ function clearSearch(){
    TAB / LOAD MORE / MOBİL MENÜ
 ============================================================ */
 function updateListHeading(search, summary) {
-  const titles = {bekleyen:"Bekleyen Siparişler", hazirlandi:"Hazırlanan Siparişler", kargolandi:"Kargolanan Siparişler", tamamlandi:"Tamamlanan Siparişler", iade:"İade Siparişleri", sorunlu:"Sorunlu Siparişler", iptal:"İptal Edilen Siparişler"};
+  const titles = {web:"Web Siparişleri",bekleyen:"Bekleyen Siparişler", hazirlandi:"Hazırlanan Siparişler", kargolandi:"Kargolanan Siparişler", tamamlandi:"Tamamlanan Siparişler", iade:"İade Siparişleri", sorunlu:"Sorunlu Siparişler", iptal:"İptal Edilen Siparişler"};
   const title = document.getElementById("pageTitle");
   const info = document.getElementById("listSummary");
   const cargoTitles={all:"Tüm Kargolar",created:"Hazırlandı · Tüm Kargolar",transit:"Yolda · Tüm Kargolar",delivery:"Dağıtımda · Tüm Kargolar",delivered:"Teslim Edildi · Tüm Kargolar",problem:"Sorun · Tüm Kargolar",return:"Geri Geliyor · Tüm Kargolar"};
@@ -3070,42 +3072,10 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-async function openWebOrders(){
-  if(!isGaziAdmin){toast("Web siparişlerini yalnızca yönetici görüntüleyebilir.");return;}
-  let dialog=document.getElementById("webOrdersDialog");
-  if(dialog)dialog.remove();
-  dialog=document.createElement("dialog");
-  dialog.id="webOrdersDialog";
-  dialog.style.cssText="width:min(96vw,1100px);max-height:90vh;padding:0;border:0;border-radius:12px;box-shadow:0 12px 48px #0006;color:#222";
-  dialog.innerHTML='<div style="position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;background:#fff;border-bottom:1px solid #ddd"><div><h2 style="margin:0">Web Siparişleri</h2><p id="webOrdersSummary" style="margin:5px 0 0;color:#666">Yükleniyor…</p></div><button type="button" id="webOrdersClose" class="btn-mini">Kapat</button></div><div style="overflow:auto;padding:12px 16px 20px"><table style="width:100%;border-collapse:collapse;min-width:800px"><thead><tr><th style="text-align:left;padding:9px;border-bottom:1px solid #ddd">Sipariş No / Tarih</th><th style="text-align:left;padding:9px;border-bottom:1px solid #ddd">Müşteri</th><th style="text-align:left;padding:9px;border-bottom:1px solid #ddd">Adres</th><th style="text-align:left;padding:9px;border-bottom:1px solid #ddd">Ürün</th><th style="text-align:right;padding:9px;border-bottom:1px solid #ddd">Tutar</th></tr></thead><tbody id="webOrdersRows"><tr><td colspan="5" style="padding:18px;text-align:center">Yükleniyor…</td></tr></tbody></table></div>';
-  document.body.append(dialog);
-  dialog.querySelector("#webOrdersClose").onclick=()=>dialog.close();
-  dialog.addEventListener("click",event=>{if(event.target===dialog)dialog.close();});
-  dialog.addEventListener("close",()=>dialog.remove(),{once:true});
-  dialog.showModal();
-  const result=await db.from("web_siparisler").select("id,ad_soyad,telefon,sehir_ilce,adres,urun,toplam_tutar,kargo_tutar,odeme_sekli,durum,created_at,gazi_siparis_no").order("created_at",{ascending:false}).limit(200);
-  if(!dialog.isConnected)return;
-  const summary=dialog.querySelector("#webOrdersSummary"),tbody=dialog.querySelector("#webOrdersRows");
-  if(result.error){summary.textContent="Siparişler yüklenemedi.";tbody.innerHTML='<tr><td colspan="5" style="padding:18px;color:#a00">Erişim reddedildi veya bağlantı kurulamadı.</td></tr>';return;}
-  const rows=result.data||[];
-  summary.textContent=rows.length+" sipariş · En yeni siparişler";
-  if(!rows.length){tbody.innerHTML='<tr><td colspan="5" style="padding:18px;text-align:center">Henüz web siparişi yok.</td></tr>';return;}
-  const esc=value=>escapeHtml(value==null?"":String(value));
-  tbody.innerHTML=rows.map(order=>{
-    const when=order.created_at?new Date(order.created_at).toLocaleString("tr-TR"):"";
-    const phone=String(order.telefon||"").replace(/\D/g,"");
-    const contact=phone?'<a href="https://wa.me/'+encodeURIComponent(phone)+'" target="_blank" rel="noopener">'+esc(order.telefon)+'</a>':"";
-    const total=Number(order.toplam_tutar||0).toLocaleString("tr-TR")+" TL";
-    const status=order.gazi_siparis_no?"Gazi #"+esc(order.gazi_siparis_no):esc(order.durum||"Yeni");
-    return '<tr><td style="vertical-align:top;padding:10px;border-bottom:1px solid #eee"><strong>'+esc(order.id)+'</strong><br><small>'+esc(when)+'</small><br><small>'+status+'</small></td><td style="vertical-align:top;padding:10px;border-bottom:1px solid #eee"><strong>'+esc(order.ad_soyad)+'</strong><br>'+contact+'</td><td style="vertical-align:top;padding:10px;border-bottom:1px solid #eee">'+esc(order.sehir_ilce)+'<br>'+esc(order.adres)+'</td><td style="vertical-align:top;padding:10px;border-bottom:1px solid #eee">'+esc(order.urun)+'<br>'+esc(order.odeme_sekli)+'</td><td style="vertical-align:top;padding:10px;text-align:right;border-bottom:1px solid #eee;white-space:nowrap"><strong>'+esc(total)+'</strong></td></tr>';
-  }).join("");
-}
-
 /* ============================================================
    GLOBAL EXPORT
 ============================================================ */
 Object.assign(window, {
-  openWebOrders,
   logout,
   openOrderTakerSettings,
   loadOrders,
@@ -3174,7 +3144,7 @@ document.getElementById("shipmentQueryMenu").hidden = !isGaziAdmin;
 try { await loadOrderTakerNames(); } catch { toast("Kişi isimleri yüklenemedi. Sayfayı yenileyin."); }
 
 const requestedTab = new URLSearchParams(location.search).get("tab");
-if (["bekleyen","hazirlandi","kargolandi","tamamlandi","iade","sorunlu","iptal"].includes(requestedTab)) {
+if (["bekleyen","hazirlandi","kargolandi","tamamlandi","iade","sorunlu","iptal","web"].includes(requestedTab)) {
   currentTab = requestedTab;
   document.querySelectorAll(".menu li:not(.menu-more)").forEach(item => item.classList.toggle("active", item.id === "tab_" + currentTab));
 }
