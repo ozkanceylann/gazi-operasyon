@@ -283,3 +283,17 @@ body.login-page { background:radial-gradient(ellipse at 100% 0,#3b5c4540,transpa
   background:#d8efda!important;
   color:#183b20;
 }
+
+/* Dark-green text stays readable on light-green web order rows. */
+.orders-page .orders-table #ordersBody tr.order-web-source .order-customer-name,
+.orders-page .orders-table #ordersBody tr.order-web-source .order-product-limit,
+.orders-page .orders-table #ordersBody tr.order-web-source .order-total-amount,
+.orders-page .orders-table #ordersBody tr.order-web-source .order-cell--number,
+.orders-page .orders-table #ordersBody tr.order-web-source .order-date,
+.orders-page .orders-table #ordersBody tr.order-web-source .order-mobile-field>strong,
+.orders-page .orders-table #ordersBody tr.order-web-source .order-mobile-field>span,
+.orders-page .orders-table #ordersBody tr.order-web-source .order-mobile-address,
+.orders-page .orders-table #ordersBody tr.order-web-source .order-mobile-delivery,
+.orders-page .orders-table #ordersBody tr.order-web-source .order-taker-support {
+  color:#183b20!important;
+}
