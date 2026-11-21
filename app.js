@@ -209,7 +209,7 @@ let listRequest = 0;
 let listLoading = false;
 function applyTabFilter(q, tab=currentTab, operation=operationFilter, allCargo=false) {
   if(allCargo)return q.or("kargo_durumu.eq.Kargolandı,kargo_durumu.eq.Tamamlandı,isDelivered.eq.true,shipmentStatusCode.gt.0,kargo_takip_kodu.not.is.null,iade_kodu.not.is.null,and(shipmentStatus.not.is.null,shipmentStatus.neq.)");
-  if(tab==="web") q=q.eq("siparis_alan","Web Sitesi");
+  if(tab==="web") q=q.eq("is_web_order",true);
   if(tab==="bekleyen")   q = q.eq("kargo_durumu","Bekliyor");
   if(tab==="hazirlandi") q = q.eq("kargo_durumu","Hazırlandı");
   const deliveredFilter = "shipmentStatusCode.eq.5,isDelivered.eq.true,shipmentStatus.eq.Teslim_Edildi,shipmentStatus.eq.Teslim Edildi";
@@ -533,6 +533,7 @@ function orderTakerPhoneSlot(value) {
 
 
 function orderTakerMarkup(order) {
+  if (order.is_web_order === true) return '<span class="order-taker-person">Web Sitesi · Ortak</span>';
   const phone = String(order.siparis_tel ?? "").trim();
   const name = String(order.siparis_alan ?? "").trim();
   const fallbackPhone = /^[+\d\s().-]+$/.test(name) ? name : "";
@@ -869,7 +870,7 @@ tr.addEventListener("click", (e)=>{
 });
 
 
-if(o.siparis_alan==="Web Sitesi")tr.classList.add("order-web-source");
+if(o.is_web_order===true)tr.classList.add("order-web-source");
 tbody.appendChild(tr);
 });
 
