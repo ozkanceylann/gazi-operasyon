@@ -869,7 +869,7 @@ tr.addEventListener("click", (e)=>{
 });
 
 
-if(o.siparis_alan==="Web Sitesi"){tr.classList.add("order-web-source");tr.querySelectorAll("td").forEach(td=>td.style.backgroundColor="#e8f5e9");}
+if(o.siparis_alan==="Web Sitesi")tr.classList.add("order-web-source");
 tbody.appendChild(tr);
 });
 
