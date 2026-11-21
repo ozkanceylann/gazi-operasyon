@@ -1864,6 +1864,33 @@ async function loadCities(){
   return cityCache;
 }
 
+function normalizeDistrictKey(value){
+  return String(value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g,"i")
+    .replace(/[^a-z0-9]/g,"");
+}
+
+function deduplicateDistricts(rows){
+  const unique=new Map();
+  const score=row=>{
+    const code=String(row.code ?? "").trim();
+    const legacyId=/^\d{2}-/.test(String(row.id ?? ""));
+    return (/^\d{2}$/.test(code)?2:0)+(legacyId?1:0);
+  };
+
+  for(const row of rows || []){
+    const key=normalizeDistrictKey(row.name);
+    if(!key)continue;
+    const current=unique.get(key);
+    if(!current||score(row)>score(current))unique.set(key,row);
+  }
+
+  return [...unique.values()].sort((a,b)=>String(a.name ?? "").localeCompare(String(b.name ?? ""),"tr"));
+}
+
 async function loadDistricts(cityId){
   if(!cityId) return [];
   if(districtCache.has(cityId)) return districtCache.get(cityId) || [];
@@ -1880,8 +1907,9 @@ async function loadDistricts(cityId){
     return [];
   }
 
-  districtCache.set(cityId, data || []);
-  return data || [];
+  const districts=deduplicateDistricts(data || []);
+  districtCache.set(cityId, districts);
+  return districts;
 }
 
 function findCityIdForOrder(order, cities){
