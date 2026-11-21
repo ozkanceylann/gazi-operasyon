@@ -267,3 +267,19 @@ body.login-page { background:radial-gradient(ellipse at 100% 0,#3b5c4540,transpa
   :where(button,[role="button"],input[type="button"],input[type="submit"],input[type="reset"],a[href],summary,.menu li[onclick],[data-order]) {transition:none;}
   :where(button,[role="button"],input[type="button"],input[type="submit"],input[type="reset"],a[href],summary,.menu li[onclick],[data-order]):active {scale:none;}
 }
+
+/* Web orders keep their shared light-green color, including on hover. */
+.orders-page .orders-table #ordersBody tr.order-web-source,
+.orders-page .orders-table #ordersBody tr.order-web-source:nth-child(even) {
+  background:#e8f5e9!important;
+  color:#183b20;
+}
+.orders-page .orders-table #ordersBody tr.order-web-source td {
+  background:#e8f5e9!important;
+  color:#183b20;
+  border-color:#c9e6cb!important;
+}
+.orders-page .orders-table #ordersBody tr.order-web-source:hover td {
+  background:#d8efda!important;
+  color:#183b20;
+}
