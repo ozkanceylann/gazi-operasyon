@@ -275,8 +275,11 @@
     try {
       const rows = [], size = 500;
       for (let offset = 0;;offset += size) {
+        const statusBaseFilter = st
+          ? "kargo_durumu.is.null,kargo_durumu.neq.Silindi"
+          : "kargo_durumu.is.null,and(kargo_durumu.neq.Silindi,kargo_durumu.neq.İptal)";
         let q = db.from(TABLE).select("siparis_no,ad_soyad,toplam_tutar,kargo_durumu,tarih,siparis_alan,siparis_tel,kargo_adet,urun_bilgisi,sehir,shipmentStatusCode,isDelivered")
-          .or("kargo_durumu.is.null,kargo_durumu.neq.Silindi");
+          .or(statusBaseFilter);
         if(s) q=q.gte("tarih", s);
         if(e) {
           const next = new Date(e+"T12:00:00"); next.setDate(next.getDate()+1);
