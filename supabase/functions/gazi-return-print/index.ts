@@ -6,7 +6,7 @@ Deno.serve(async(req:Request)=>{
  try{
   if(req.method!=="GET")return fail();
   const url=new URL(req.url),ref=url.searchParams.get("ref")||"",token=url.searchParams.get("rtnid")||"";
-  if(!/^(?:GZI-\d+|AKH\d+)-R\d+$/.test(ref)||!/^[A-Za-z0-9]{8,80}$/.test(token))return fail();
+  if(!/^(?:GZ-\d+(?:-R[1-9]\d*)?|GZ\d+R[1-9]\d*|(?:GZI-\d+|AKH\d+)-R\d+|GAZİ-\d+(?:-R\d+)?)$/.test(ref)||!/^[A-Za-z0-9]{8,80}$/.test(token))return fail();
   // The existing DHL label's unguessable token is required and matched to its saved reference.
   const query=new URLSearchParams({select:"reference_id,label_url",reference_id:"eq."+ref,status:"eq.ready",limit:"2"});
   const db=await fetch(SUPABASE_URL+"/rest/v1/gazi_iade_islemleri?"+query,{headers:{apikey:SERVICE,Authorization:"Bearer "+SERVICE},signal:AbortSignal.timeout(15000)});
