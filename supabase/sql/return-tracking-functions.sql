@@ -21,7 +21,7 @@ begin
       or nullif(trim(o.ilce_kodu),'') is null then raise exception 'İade için müşteri, telefon, adres ve şehir/ilçe kodları eksiksiz olmalı'; end if;
     select jsonb_build_object('url','https://n8n.ozkanceylan.uk/webhook/gazi_iade_olustur','key',server_key) into config from gazi_carrier_private.return_connection where id=1;
     if nullif(config->>'url','') is null or nullif(config->>'key','') is null then raise exception 'DHL iade bağlantısı ayarlanmamış'; end if;
-    ref:=coalesce(r.reference_id,'GZI-'||p_id||'-R1');
+    ref:=coalesce(r.reference_id,'GZ-'||p_id);
     insert into public.gazi_iade_islemleri(siparis_no,reference_id,status)
       values(p_id,ref,'creating') on conflict(siparis_no) do update set status='creating',error=null,updated_at=now();
     return jsonb_build_object('existing',false,'order',to_jsonb(o),'reference',ref,'gateway',config);
