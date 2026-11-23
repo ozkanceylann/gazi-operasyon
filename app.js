@@ -536,14 +536,16 @@ function orderTakerMarkup(order) {
   if (order.is_web_order === true) return '<span class="order-taker-person">Web Sitesi · Ortak</span>';
   const phone = String(order.siparis_tel ?? "").trim();
   const name = String(order.siparis_alan ?? "").trim();
-  const fallbackPhone = /^[+\d\s().-]+$/.test(name) ? name : "";
-  const key = orderTakerPhoneKey(phone || fallbackPhone);
+  const nameIsPhone = /^[+\d\s().-]+$/.test(name);
+  // Siparişi alan bilgisi sipariş oluşturulurken kaydedilir; düzenleme alanlarındaki telefon değişse bile bu bilgi esas alınır.
+  if (name && !nameIsPhone && name !== "-" && name !== "—") return `<span class="order-taker-person">${escapeHtml(name)}</span>`;
+  const sourcePhone = nameIsPhone ? name : phone;
+  const key = orderTakerPhoneKey(sourcePhone);
   const displayName = orderTakerNames.get(key);
   if (displayName) {
-    return `<a class="order-taker-person" href="tel:+${key}" title="${escapeHtml(phone || fallbackPhone)}" onclick="event.stopPropagation()">${escapeHtml(displayName)}</a>`;
+    return `<a class="order-taker-person" href="tel:+${key}" title="${escapeHtml(sourcePhone)}" onclick="event.stopPropagation()">${escapeHtml(displayName)}</a>`;
   }
-  if (name && !fallbackPhone && name !== "-" && name !== "—") return `<span class="order-taker-person">${escapeHtml(name)}</span>`;
-  return `<span class="order-taker-person order-taker-person--unknown">${escapeHtml(phone || fallbackPhone || "—")}</span>`;
+  return `<span class="order-taker-person order-taker-person--unknown">${escapeHtml(name || phone || "—")}</span>`;
 }
 
 async function loadOrderTakerNames() {
@@ -2132,7 +2134,7 @@ async function saveEdit(){
   try { normalizedKg = CargoWeights.normalize(kargo_kg.value, kargo_adet.value); }
   catch(error) { return toast(error.message,6000); }
   const updated = {
-    ad_soyad: ad_soyad.value, siparis_tel: siparis_tel.value, siparis_alan: siparis_tel.value, musteri_tel: musteri_tel.value,
+    ad_soyad: ad_soyad.value, siparis_tel: siparis_tel.value, musteri_tel: musteri_tel.value,
     adres: adres.value, sehir: sehirName, ilce: ilceName,
     sehir_kodu: sehirKoduVal, ilce_kodu: ilceKoduVal,
     kargo_adet: kargo_adet.value, kargo_kg: normalizedKg,
