@@ -26,10 +26,10 @@ begin
  select a.approved_at into stamp from gazi_shipping.approvals a where a.order_id=o.siparis_no and a.fingerprint=gazi_shipping.fingerprint(o);
  approved:=stamp is not null;
  select count(*),coalesce(bool_or(r.status='approved'),false) into receipts,receipt_ok from public.order_receipts r where r.order_id in (o.siparis_no,o.bolunme_ana_siparis_no) and nullif(btrim(r.object_path),'') is not null;
- if (mobile or free_order) and not approved then reasons:=array_append(reasons,case when mobile then 'Mobil sipariş için Gazi Operasyon onayı gerekli.' else 'Ücretsiz sipariş için Gazi Operasyon onayı gerekli.' end);end if;
+ if free_order and not approved then reasons:=array_append(reasons,'Ücretsiz sipariş için Gazi Operasyon onayı gerekli.');end if;
  if eft and receipts=0 then reasons:=array_append(reasons,'EFT siparişine dekont eklenmeden kargoya gönderilemez.');
  elsif eft and not receipt_ok then reasons:=array_append(reasons,'EFT dekontu Gazi Operasyon tarafından onaylanmalı.');end if;
- return jsonb_build_object('order_id',o.siparis_no,'mobile',mobile,'free',free_order,'eft',eft,'approval_required',mobile or free_order,'approved',approved,'approved_at',stamp,'receipt_count',receipts,'receipt_approved',receipt_ok,'can_ship',cardinality(reasons)=0,'reasons',to_jsonb(reasons),'fingerprint',gazi_shipping.fingerprint(o));
+ return jsonb_build_object('order_id',o.siparis_no,'mobile',mobile,'free',free_order,'eft',eft,'approval_required',free_order,'approved',approved,'approved_at',stamp,'receipt_count',receipts,'receipt_approved',receipt_ok,'can_ship',cardinality(reasons)=0,'reasons',to_jsonb(reasons),'fingerprint',gazi_shipping.fingerprint(o));
 end $$;
 
 -- Only this authenticated entry point is callable by the API roles.
