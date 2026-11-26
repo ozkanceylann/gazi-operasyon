@@ -740,6 +740,22 @@ async function hydrateExtras(rows,isCurrent,root,kinds=['history','receipts','no
   for(const o of rows)for(const slot of root.querySelectorAll(`[data-order-extra="${kind}:${Number(o.siparis_no)}:${o._extrasToken}"]`)){
    slot.outerHTML=extraContent(o,kind);
   }
+  if(kind==='receipts'){
+   for(const o of rows){
+    const id=Number(o.siparis_no),orderRow=root.querySelector(`tr[data-order-id="${id}"]`);
+    const cargoBadge=orderRow?.querySelector('.shipping-control-badge');
+    if(!orderRow||!cargoBadge)continue;
+    let badgeRow=root.querySelector(`tr.order-shipping-extra-row[data-order-id="${id}"]`);
+    if(!badgeRow){
+     badgeRow=document.createElement('tr');badgeRow.className='order-shipping-extra-row';badgeRow.dataset.orderId=String(id);
+     const cell=document.createElement('td');cell.colSpan=getColumnCount();
+     const strip=document.createElement('div');strip.className='order-shipping-extra-strip';
+     cell.appendChild(strip);badgeRow.appendChild(cell);orderRow.insertAdjacentElement('afterend',badgeRow);
+    }
+    const strip=badgeRow.querySelector('.order-shipping-extra-strip');
+    for(const badge of orderRow.querySelectorAll('.shipping-control-badge,.receipt-badge'))strip.appendChild(badge);
+   }
+  }
  }));
 }
 
@@ -800,7 +816,7 @@ tr.innerHTML = isPendingTab
     <td>${o.siparis_no}${OrderSplit.related(o)}</td>
     <td>${orderStage === "Bekliyor" ? `<div class="order-primary-actions"><button type="button" class="btn-direct-cargo" onclick="event.stopPropagation(); directShipFromList(${Number(o.siparis_no)}, this)">Kargola</button>${errorPreview===actionBtn?"":errorPreview}</div>` : actionBtn}</td>
     <td class="cargo-count-column">${cargoCountBadge(o.kargo_adet)}</td>
-    <td><div class="order-customer-meta"><span class="order-customer-name" title="${escapeHtml(o.ad_soyad)}">${escapeHtml(o.ad_soyad)}</span>${orderDateMarkup(o.tarih)}</div>${deliveryWarning(o)}${extraSlot(o,'history')}${extraSlot(o,'receipts')}${extraSlot(o,'note')}</td>
+    <td><div class="order-customer-meta"><span class="order-customer-name" title="${escapeHtml(o.ad_soyad)}">${escapeHtml(o.ad_soyad)}</span>${orderDateMarkup(o.tarih)}</div>${deliveryWarning(o)}${extraSlot(o,'history')}${extraSlot(o,'note')}</td>
     <td>
   <span class="order-product-limit"
         title="${escapeHtml(parseProduct(o.urun_bilgisi))}">
@@ -816,7 +832,7 @@ tr.innerHTML = isPendingTab
   : `
     <td>${o.siparis_no}${OrderSplit.related(o)}</td>
     <td class="cargo-count-column">${cargoCountBadge(o.kargo_adet)}</td>
-    <td><div class="order-customer-meta"><span class="order-customer-name" title="${escapeHtml(o.ad_soyad)}">${escapeHtml(o.ad_soyad)}</span>${orderDateMarkup(o.tarih)}</div>${deliveryWarning(o)}${extraSlot(o,'history')}${extraSlot(o,'receipts')}${extraSlot(o,'note')}</td>
+    <td><div class="order-customer-meta"><span class="order-customer-name" title="${escapeHtml(o.ad_soyad)}">${escapeHtml(o.ad_soyad)}</span>${orderDateMarkup(o.tarih)}</div>${deliveryWarning(o)}${extraSlot(o,'history')}${extraSlot(o,'note')}</td>
     <td>
   <span class="order-product-limit"
         title="${escapeHtml(parseProduct(o.urun_bilgisi))}">
