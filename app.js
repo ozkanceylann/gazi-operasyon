@@ -740,6 +740,22 @@ async function hydrateExtras(rows,isCurrent,root,kinds=['history','receipts','no
   for(const o of rows)for(const slot of root.querySelectorAll(`[data-order-extra="${kind}:${Number(o.siparis_no)}:${o._extrasToken}"]`)){
    slot.outerHTML=extraContent(o,kind);
   }
+  if(kind==='receipts'){
+   for(const o of rows){
+    const id=Number(o.siparis_no),orderRow=root.querySelector(`tr[data-order-id="${id}"]`);
+    const cargoBadge=orderRow?.querySelector('.shipping-control-badge');
+    if(!orderRow||!cargoBadge)continue;
+    let badgeRow=root.querySelector(`tr.order-shipping-extra-row[data-order-id="${id}"]`);
+    if(!badgeRow){
+     badgeRow=document.createElement('tr');badgeRow.className='order-shipping-extra-row';badgeRow.dataset.orderId=String(id);
+     const cell=document.createElement('td');cell.colSpan=getColumnCount();
+     const strip=document.createElement('div');strip.className='order-shipping-extra-strip';
+     cell.appendChild(strip);badgeRow.appendChild(cell);orderRow.insertAdjacentElement('afterend',badgeRow);
+    }
+    const strip=badgeRow.querySelector('.order-shipping-extra-strip');
+    for(const badge of orderRow.querySelectorAll('.shipping-control-badge'))strip.appendChild(badge);
+   }
+  }
  }));
 }
 
