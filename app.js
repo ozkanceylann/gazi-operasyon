@@ -816,7 +816,7 @@ tr.innerHTML = isPendingTab
     <td>${o.siparis_no}${OrderSplit.related(o)}</td>
     <td>${orderStage === "Bekliyor" ? `<div class="order-primary-actions"><button type="button" class="btn-direct-cargo" onclick="event.stopPropagation(); directShipFromList(${Number(o.siparis_no)}, this)">Kargola</button>${errorPreview===actionBtn?"":errorPreview}</div>` : actionBtn}</td>
     <td class="cargo-count-column">${cargoCountBadge(o.kargo_adet)}</td>
-    <td><div class="order-customer-meta"><span class="order-customer-name" title="${escapeHtml(o.ad_soyad)}">${escapeHtml(o.ad_soyad)}</span>${orderDateMarkup(o.tarih)}</div>${deliveryWarning(o)}${extraSlot(o,'history')}${extraSlot(o,'note')}</td>
+    <td><div class="order-customer-meta"><span class="order-customer-name" title="${escapeHtml(o.ad_soyad)}">${escapeHtml(o.ad_soyad)}</span>${orderDateMarkup(o.tarih)}</div>${deliveryWarning(o)}${extraSlot(o,'history')}${extraSlot(o,'receipts')}${extraSlot(o,'note')}</td>
     <td>
   <span class="order-product-limit"
         title="${escapeHtml(parseProduct(o.urun_bilgisi))}">
@@ -832,7 +832,7 @@ tr.innerHTML = isPendingTab
   : `
     <td>${o.siparis_no}${OrderSplit.related(o)}</td>
     <td class="cargo-count-column">${cargoCountBadge(o.kargo_adet)}</td>
-    <td><div class="order-customer-meta"><span class="order-customer-name" title="${escapeHtml(o.ad_soyad)}">${escapeHtml(o.ad_soyad)}</span>${orderDateMarkup(o.tarih)}</div>${deliveryWarning(o)}${extraSlot(o,'history')}${extraSlot(o,'note')}</td>
+    <td><div class="order-customer-meta"><span class="order-customer-name" title="${escapeHtml(o.ad_soyad)}">${escapeHtml(o.ad_soyad)}</span>${orderDateMarkup(o.tarih)}</div>${deliveryWarning(o)}${extraSlot(o,'history')}${extraSlot(o,'receipts')}${extraSlot(o,'note')}</td>
     <td>
   <span class="order-product-limit"
         title="${escapeHtml(parseProduct(o.urun_bilgisi))}">
