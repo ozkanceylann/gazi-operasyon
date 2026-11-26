@@ -95,7 +95,6 @@
 
     <ul class="menu">
       <li id="tab_bekleyen"   class="active" onclick="setTab('bekleyen')">Bekleyen</li>
-      <li id="tab_hazirlandi" onclick="setTab('hazirlandi')">Hazırlandı</li>
       <li id="tab_kargolandi" onclick="setTab('kargolandi')">Kargolandı</li>
       <li id="tab_tamamlandi" onclick="setTab('tamamlandi')">Tamamlananlar</li>
       <li id="tab_iade" onclick="setTab('iade')">İade</li>
@@ -132,7 +131,7 @@
 
 
     <section id="operationCounters" class="operation-counters" aria-label="Operasyon özeti" aria-busy="true">
-      <button type="button" class="operation-card operation-card--prepare" data-operation="prepare" aria-pressed="false" onclick="openOperationQueue('prepare')"><span>Hazırlanacak</span><div class="handover-count"><strong data-operation-count="prepare">…</strong><small data-operation-parcels="prepare">… parça</small></div><small>Bekleyen siparişler</small></button>
+      <button type="button" class="operation-card operation-card--prepare" data-operation="prepare" aria-pressed="false" onclick="openOperationQueue('prepare')"><span>Bekleyen</span><div class="handover-count"><strong data-operation-count="prepare">…</strong><small data-operation-parcels="prepare">… parça</small></div><small>Bekleyen siparişler</small></button>
       <button type="button" class="operation-card operation-card--label" data-operation="label" aria-pressed="false" onclick="openOperationQueue('label')"><span>Etiket bekleyen</span><div class="handover-count"><strong data-operation-count="label">…</strong><small data-operation-parcels="label">… parça</small></div><small>Etiketi oluşmayan / hiç yazdırılmayan</small></button>
       <button type="button" class="operation-card operation-card--handover" data-operation="handover" aria-pressed="false" onclick="openOperationQueue('handover')"><span>DHL teslim alımı bekleyen</span><div class="handover-count"><strong data-operation-count="handover">…</strong><small data-operation-parcels="handover">… parça</small></div><small>Etiketi hazır, çıkış bekliyor</small></button>
       <button type="button" class="operation-card operation-card--attention" data-operation="attention" aria-pressed="false" onclick="openOperationQueue('attention')"><span>Müdahale gereken</span><div class="handover-count"><strong data-operation-count="attention">…</strong><small data-operation-parcels="attention">… parça</small></div><small>Teslim edilemedi / destek gerekiyor</small></button>
@@ -194,9 +193,7 @@
 
 <div id="actionButtons" class="modal-btns">
 
-    <button id="btnPrepare" class="btn-primary btn-prepare" onclick="directShipFromDetail(this)">Direkt Kargola</button>
-    <button id="btnCargo" class="btn-secondary" onclick="sendToCargo()">Kargola</button>
-    <button id="btnWaiting" class="btn-waiting" onclick="setWaiting()">Bekliyor</button>
+    <button id="btnCargo" class="btn-primary" onclick="sendToCargo()">Kargola</button>
     <button id="btnBarcode" class="btn-primary" style="display:none;" onclick="printBarcode()">Etiket Oluştur / Yazdır</button>
 
     <button class="btn-warning" onclick="enterEditMode()">Düzenle</button>
