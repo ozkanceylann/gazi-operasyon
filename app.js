@@ -3112,7 +3112,7 @@ document.querySelectorAll(".menu li:not(.menu-more)").forEach(item => {
 });
 
 document.getElementById("takerSettingsMenu").hidden = !isGaziAdmin;
-document.getElementById("webOrdersMenu").hidden = !isGaziAdmin;
+document.getElementById("tab_web").hidden = !isGaziAdmin;
 document.getElementById("shipmentQueryMenu").hidden = !isGaziAdmin;
 try { await loadOrderTakerNames(); } catch { toast("Kişi isimleri yüklenemedi. Sayfayı yenileyin."); }
 
