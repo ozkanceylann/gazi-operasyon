@@ -753,7 +753,7 @@ async function hydrateExtras(rows,isCurrent,root,kinds=['history','receipts','no
      cell.appendChild(strip);badgeRow.appendChild(cell);orderRow.insertAdjacentElement('afterend',badgeRow);
     }
     const strip=badgeRow.querySelector('.order-shipping-extra-strip');
-    for(const badge of orderRow.querySelectorAll('.shipping-control-badge,.receipt-badge'))strip.appendChild(badge);
+    for(const badge of orderRow.querySelectorAll('.shipping-control-badge'))strip.appendChild(badge);
    }
   }
  }));
