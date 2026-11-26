@@ -85,7 +85,7 @@
     text(phone,start+(captionWidth+gap)/DOT,-510,phoneSize);
    }
    const note=String(order.notlar??'').replace(/\\n|\r?\n/g,' ').replace(/\s+/g,' ').trim().normalize('NFC');
-  const productLength=amount?540:(note?540:640);
+  const productLength=amount?540:640;
   const productWidth=productLength-4;
    {
     // All orders: up to four products in one column; five or more in two.
@@ -106,19 +106,11 @@
    }
    if(note){
     const line='Not: '+note;
-    const noteStart=productLength+10;
-    const noteLength=Math.max(0,825-noteStart);
-    const noteWidth=noteLength*DOT;
-    const preferredSize=14*DOT;
-    if(noteWidth>0&&font.widthOfTextAtSize(line,preferredSize)<=noteWidth){
-     // Short notes sit directly after the product block, in the free lower strip.
-     field(noteStart,90,noteLength,18,()=>text(line,noteStart+2,92+font.heightAtSize(preferredSize,{descender:false})/DOT,preferredSize));
-    }else{
-     // Longer notes retain the full-length margin strip while gaining a little size.
-     const fullWidth=756*DOT;
-     const size=Math.min(preferredSize,fullWidth/font.widthOfTextAtSize(line,1));
-     field(-120,90,760,18,()=>text(line,-118,92+font.heightAtSize(size,{descender:false})/DOT,size));
-    }
+    const fullWidth=756*DOT;
+    const preferredSize=20*DOT;
+    const size=Math.min(preferredSize,fullWidth/font.widthOfTextAtSize(line,1));
+    // Use the complete footer row for every note; shrink only when the note is long.
+    field(-120,90,760,18,()=>text(line,-118,92+font.heightAtSize(size,{descender:false})/DOT,size));
    }
    if(amount){
     let size=24*DOT;
