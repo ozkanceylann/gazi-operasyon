@@ -1579,7 +1579,7 @@ a.order-taker-phone:focus-visible { outline-color:hsl(var(--phone-hue) 42% 65%);
 .orders-page .btn-direct-cargo:disabled { opacity:.6; cursor:wait; }
 .orders-page .orders-table--pending .order-cell--primary { width:90px; }
 .orders-page .orders-table--pending .order-cell--product { width:calc(28% - 10px); }
-.orders-page .orders-table--pending .order-cell--customer { width:calc(24% - 137px); }
+.orders-page .orders-table--pending .order-cell--customer { width:calc(24% + 20px); }
 @media(max-width:1200px) {
   .orders-page .orders-table #ordersBody tr,
   .orders-page .orders-table #ordersBody tr:nth-child(even) {
