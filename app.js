@@ -61,7 +61,7 @@ function getColumnCount(){
 }
 
 function shouldShowNoteColumn(tab) {
-  return ["bekleyen", "hazirlandi"].includes(tab);
+  return tab === "bekleyen";
 }
 
 function shouldShowCargoCode(tab) {
@@ -79,8 +79,7 @@ function cargoCountBadge(value) {
 }
 
 function orderColumnRoles(){
-  if(currentTab==="bekleyen")return ["number","primary","count","customer","product","total","status","note","taker"];
-  if(currentTab==="hazirlandi")return ["number","count","customer","product","total","status","note","taker","actions"];
+  if(["bekleyen","web"].includes(currentTab))return ["number","primary","count","customer","product","total","status","note","taker"];
   return ["number","count","customer","product","total","status","code","taker","actions"];
 }
 function labelOrderCells(row){
@@ -93,12 +92,12 @@ function renderTableHeader(){
   const head = document.getElementById("ordersHeadRow");
   if(!head) return;
 
-  head.closest("table")?.classList.toggle("orders-table--prepared", currentTab === "hazirlandi");
+  head.closest("table")?.classList.remove("orders-table--prepared");
   head.closest("table")?.classList.toggle("orders-table--pending", ["bekleyen","web"].includes(currentTab));
   head.innerHTML = ["bekleyen","web"].includes(currentTab)
   ? `
     <th>S.No</th>
-    <th>Hazırla</th>
+    <th>İşlem</th>
     <th class="cargo-count-column" aria-label="Kargo Adet">Kargo<br>Adet</th>
     <th>İsim</th>
     <th>Ürün</th>
@@ -116,7 +115,7 @@ function renderTableHeader(){
     <th>Durum</th>
     <th>${shouldShowNoteColumn(currentTab) ? "Not" : "Kargo Kodu"}</th>
     <th>Sipariş Alan</th>
-    <th>${currentTab === "hazirlandi" ? "Hata / İşlem" : "İşlem"}</th>
+    <th>İşlem</th>
   `;
 
   labelOrderCells(head);
@@ -210,8 +209,7 @@ let listLoading = false;
 function applyTabFilter(q, tab=currentTab, operation=operationFilter, allCargo=false) {
   if(allCargo)return q.or("kargo_durumu.eq.Kargolandı,kargo_durumu.eq.Tamamlandı,isDelivered.eq.true,shipmentStatusCode.gt.0,kargo_takip_kodu.not.is.null,iade_kodu.not.is.null,and(shipmentStatus.not.is.null,shipmentStatus.neq.)");
   if(tab==="web") q=q.eq("is_web_order",true);
-  if(tab==="bekleyen")   q = q.eq("kargo_durumu","Bekliyor");
-  if(tab==="hazirlandi") q = q.eq("kargo_durumu","Hazırlandı");
+  if(tab==="bekleyen")   q = q.in("kargo_durumu",["Bekliyor","Hazırlandı"]);
   const deliveredFilter = "shipmentStatusCode.eq.5,isDelivered.eq.true,shipmentStatus.eq.Teslim_Edildi,shipmentStatus.eq.Teslim Edildi";
   if(tab==="kargolandi") {
     q = q.in("kargo_durumu",["Kargolandı","Tamamlandı"])
@@ -229,7 +227,7 @@ function applyTabFilter(q, tab=currentTab, operation=operationFilter, allCargo=f
 
 // Dashboard and list share the same server-side predicates and session permissions.
 const OPERATION_CARDS = {
-  prepare: {tab:"bekleyen", title:"Hazırlanacak Siparişler"},
+  prepare: {tab:"bekleyen", title:"Bekleyen Siparişler"},
   label: {tab:"kargolandi", title:"Etiket Bekleyen Siparişler"},
   handover: {tab:"kargolandi", title:"DHL Teslim Alımı Bekleyen Siparişler"},
   attention: {tab:"sorunlu", title:"Müdahale Gereken Siparişler"},
@@ -456,7 +454,7 @@ async function loadCustomerNotes(rows){
 }
 function customerNoteRecord(order){const id=Number(order?.musteri_no)||customerNoteOrderIds.get(Number(order?.siparis_no));return customerNotes.get(id);}
 function customerNoteCard(order){
-  if(!["bekleyen","hazirlandi","kargolandi"].includes(currentTab))return "";
+  if(!["bekleyen","kargolandi"].includes(currentTab))return "";
   const note=String(customerNoteRecord(order)?.not||"").trim();
   if(!note)return "";
   return `<button type="button" class="customer-note-card" title="${escapeHtml(note)}" onclick="event.stopPropagation();openOrder(${Number(order.siparis_no)})"><span>Müşteri notu</span><strong>${escapeHtml(note)}</strong></button>`;
@@ -611,7 +609,7 @@ function orderLifecycleStage(order) {
   const stage = String(order?.kargo_durumu || "").trim();
   if (["İptal", "Silindi", "İade"].includes(stage)) return stage;
   if (order?.isDelivered === true || Number(order?.shipmentStatusCode) === 5) return "Tamamlandı";
-  return stage || "Aşama belirtilmemiş";
+  return stage === "Hazırlandı" ? "Bekliyor" : stage || "Aşama belirtilmemiş";
 }
 
 function orderStageBadge(order) {
@@ -624,7 +622,6 @@ function orderStageBadge(order) {
   }
   const states = {
     "Bekliyor": ["Bekleyenler", "waiting"],
-    "Hazırlandı": ["Hazırlandı", "prepared"],
     "Kargolandı": ["Kargolandı", "shipped"],
     "Tamamlandı": ["Tamamlananlar", "completed"],
     "İade": ["İade", "return"],
@@ -766,14 +763,11 @@ function renderTable(rows, { append=false, hasMore } = {}){
     if (OrderSplit.over(o)) tr.classList.add("order-over-cod");
 
     const orderStage = orderLifecycleStage(o);
-    const canShip = orderStage === "Hazırlandı";
     const canLabel = canPrintCargoLabel(o);
 
     const isTrackingTab = ["kargolandi", "tamamlandi", "sorunlu", "iade"].includes(currentTab);
 
     const isPendingTab = ["bekleyen","web"].includes(currentTab);
-
-  const isPreparedTab = currentTab === "hazirlandi";
   const retryLabel = false;
   if(retryLabel) tr.classList.add("cargo-label-retry");
 
@@ -781,11 +775,11 @@ function renderTable(rows, { append=false, hasMore } = {}){
     ? returnOrderActions(o)
     : "";
 
-const errorPreview = isPreparedTab && canShip && o.gonder_hata_bilgisi
+const errorPreview = isPendingTab && o.gonder_hata_bilgisi
   ? `<button class="error-chip"
         data-error="${escapeHtml(o.gonder_hata_bilgisi ?? "")}"
         onclick="event.stopPropagation(); showErrorDetail(this.dataset.error)">
-        <span class="error-chip__label">Hata</span>
+        <span class="error-chip__label">Kargo hatası</span>
         <span class="error-chip__text">${escapeHtml(shortenError(o.gonder_hata_bilgisi))}</span>
      </button>`
   : actionBtn;
@@ -804,7 +798,7 @@ const noteChip = o.notlar ? `
 tr.innerHTML = isPendingTab
   ? `
     <td>${o.siparis_no}${OrderSplit.related(o)}</td>
-    <td>${orderStage === "Bekliyor" ? `<div class="order-primary-actions"><button class="btn-prepare" onclick="event.stopPropagation(); prepareFromList(${Number(o.siparis_no)}, this)">Hazırla</button><button type="button" class="btn-direct-cargo" onclick="event.stopPropagation(); directShipFromList(${Number(o.siparis_no)}, this)">Direkt Kargola</button></div> ${actionBtn}` : actionBtn}</td>
+    <td>${orderStage === "Bekliyor" ? `<div class="order-primary-actions"><button type="button" class="btn-direct-cargo" onclick="event.stopPropagation(); directShipFromList(${Number(o.siparis_no)}, this)">Kargola</button>${errorPreview===actionBtn?"":errorPreview}</div>` : actionBtn}</td>
     <td class="cargo-count-column">${cargoCountBadge(o.kargo_adet)}</td>
     <td><div class="order-customer-meta"><span class="order-customer-name" title="${escapeHtml(o.ad_soyad)}">${escapeHtml(o.ad_soyad)}</span>${orderDateMarkup(o.tarih)}</div>${deliveryWarning(o)}${extraSlot(o,'history')}${extraSlot(o,'receipts')}${extraSlot(o,'note')}</td>
     <td>
@@ -892,8 +886,20 @@ function parseProduct(v){
 
 function shortenError(text, max=55){
   if(!text) return "Hata bilgisi yok";
-  if(text.length <= max) return text;
-  return text.slice(0, max) + "...";
+  const raw=String(text);
+  let detail;
+  try{detail=JSON.parse(raw);}catch{detail=null;}
+  if(!detail||typeof detail!=="object")return raw.length<=max?raw:raw.slice(0,max)+"...";
+  const find=(value,keys,depth=0)=>{
+    if(!value||typeof value!=="object"||depth>5)return "";
+    for(const key of keys){const found=value[key];if(found!==undefined&&found!==null&&String(found).trim())return String(found).trim();}
+    for(const child of Object.values(value)){const found=find(child,keys,depth+1);if(found)return found;}
+    return "";
+  };
+  const code=find(detail,["errorCode","error_code","ErrorCode","code","Code","statusCode","status_code"]);
+  const message=find(detail,["message","description","Message","Description","title","error"]);
+  const summary=[code&&`Kod ${code}`,message].filter(Boolean).join(": ")||raw;
+  return summary.length<=max?summary:summary.slice(0,max-3)+"...";
 }
 function shortenNote(text, max = 40){
   if (!text) return "";
@@ -1801,13 +1807,9 @@ ${renderOriginalMessage(d)}
   const kargo = d.kargo_durumu === "Kargolandı";
   const tamam = currentTab === "tamamlandi" || d.kargo_durumu === "Tamamlandı" || d.isDelivered === true || Number(d.shipmentStatusCode) === 5;
 
-  // Bekliyor → Direkt Kargola
-  document.getElementById("btnPrepare").style.display =
-    d.kargo_durumu === "Bekliyor" ? "inline-block" : "none";
-
-  // Hazırlandı → Kargola
+  // Bekleyen siparişler doğrudan kargoya gönderilir.
   document.getElementById("btnCargo").style.display =
-    d.kargo_durumu === "Hazırlandı" ? "inline-block" : "none";
+    ["Bekliyor","Hazırlandı"].includes(d.kargo_durumu) ? "inline-block" : "none";
 
   // Gönderi iptali Kargo hareketleri bölümünden yapılır.
   const cancelOrderButton=document.getElementById("btnCancelOrder");
@@ -2224,46 +2226,10 @@ async function setWaiting(){
   });
 }
 
-function isMobilePreparation(){
-  return window.matchMedia("(max-width: 900px), (hover: none) and (pointer: coarse)").matches;
-}
-const preparingOrders = new Set();
-async function prepareFromList(siparisNo, button){
-  if(preparingOrders.has(siparisNo)) return;
-  const mobile=isMobilePreparation();
-  const printWindow = mobile?null:window.open("", "_blank");
-  if(!mobile&&!printWindow) return toast("Yazdırma ekranı için açılır pencerelere izin verin.");
-  if(printWindow)printWindow.document.body.textContent="Sipariş hazırlanıyor…";
-  preparingOrders.add(siparisNo);
-  button.disabled=true;
-  try {
-    const {data:order,error:readError}=await db.from(TABLE).select("*").eq("siparis_no",siparisNo).single();
-    if(readError) throw readError;
-    const count=Number(order.kargo_adet);
-    if(!Number.isSafeInteger(count)||count<1||count>100) throw new Error("Siparişin kargo adedini düzeltin.");
-    const {data:updated,error}=await db.from(TABLE).update({kargo_durumu:"Hazırlandı"}).eq("siparis_no",siparisNo).eq("kargo_durumu","Bekliyor").select("siparis_no");
-    if(error) throw error;
-    if(!updated?.length) throw new Error("Sipariş artık Bekleyen durumunda değil.");
-    const {error:reactionError}=await db.functions.invoke("whatsapp-reaction",{body:{siparis_no:siparisNo,emoji:"📦"}});
-    if(reactionError) toast("Hazırlandı; WhatsApp emojisi gönderilemedi.",6000);
-    if(!mobile){
-      localStorage.setItem("prepare_print_"+siparisNo,JSON.stringify(order));
-      if(!printWindow.closed) printWindow.location.replace("printetiket-v2.html?v=20261011-prepared-label&order="+encodeURIComponent(siparisNo));
-    }
-    toast(mobile?"Sipariş hazırlandı 📦":"Sipariş hazırlandı. "+count+" paket barkodu açıldı.");
-    await loadOrders(true);
-  } catch(error){
-    if(printWindow&&!printWindow.closed) printWindow.close();
-    toast(error.message||"Sipariş hazırlanamadı.",6000);
-  } finally {preparingOrders.delete(siparisNo);button.disabled=false;}
-}
-window.prepareFromList=prepareFromList;
-
 async function directShipFromDetail(button){
-  if(button.disabled||selectedOrder?.kargo_durumu!=="Bekliyor")return;
-  const siparisNo=selectedOrder.siparis_no;
+  if(button.disabled)return;
   button.disabled=true;
-  try{await sendToCargo(siparisNo,{prepareFirst:true});}
+  try{await sendToCargo(selectedOrder?.siparis_no);}
   finally{button.disabled=false;}
 }
 
@@ -2511,71 +2477,35 @@ async function openCargoPdf(w, base64, order, {trackPrint=true}={}){
   return {print,frame};
 }
 
-async function shipPreparedFromList(siparisNo, button){
-  if(button.disabled || busy.kargola.has(Number(siparisNo))) return;
-  const label=button.textContent;
-  button.disabled=true;
-  button.textContent="Kontrol ediliyor…";
-  try {
-    const {data:order,error}=await db.from(TABLE).select("*").eq("siparis_no",siparisNo).single();
-    if(error) throw error;
-    if(order?.kargo_durumu!=="Hazırlandı") throw new Error("Sipariş artık Hazırlandı durumunda değil. Listeyi yenileyin.");
-    if(cargoEnvironment(order)==="test") throw new Error("Test gönderisi canlı bağlantıyla kargolanamaz.");
-    button.textContent="Kargolanıyor…";
-    await sendToCargo(Number(siparisNo));
-  } catch(error){
-    toast(error.message||"Sipariş kargolanamadı.",6000);
-  } finally {
-    button.disabled=false;
-    button.textContent=label;
-  }
-}
-
 async function directShipFromList(siparisNo, button){
   const id=Number(siparisNo);
-  if(button.disabled||preparingOrders.has(id)||busy.kargola.has(id))return;
+  if(button.disabled||busy.kargola.has(id))return;
   const label=button.textContent;
   button.disabled=true;button.textContent="Kontrol ediliyor…";
   let shipped=false;
-  try{shipped=await sendToCargo(id,{prepareFirst:true,keepList:true})===true;}
+  try{shipped=await sendToCargo(id,{keepList:true})===true;}
   finally{
     button.disabled=shipped;
     button.textContent=shipped?"Kargolandı":label;
-    if(shipped){
-      button.style.cursor="default";
-      const prepareButton=button.parentElement?.querySelector(".btn-prepare");
-      if(prepareButton)prepareButton.disabled=true;
-    }
+    if(!shipped)await loadOrders(true);
   }
 }
 
-async function sendToCargo(orderId,{prepareFirst=false,keepList=false}={}){
+async function sendToCargo(orderId,{keepList=false}={}){
   const siparisNo=Number(orderId ?? selectedOrder?.siparis_no);
   if(!siparisNo)return toast("Önce sipariş seçin.");
   if(busy.kargola.has(siparisNo))return toast("Kargolama sürüyor.");
-  if(prepareFirst&&preparingOrders.has(siparisNo))return toast("Sipariş hazırlanıyor.");
-  const ok=await confirmModal({title:prepareFirst?"Hazırla ve Kargola":"Siparişi Kargola",text:prepareFirst?"Sipariş önce Hazırlandı aşamasına alınacak, ardından mevcut DHL kargolama işlemi çalışacak. Etiketi Kargolandı sekmesinden ayrıca oluşturabilirsiniz. Devam edilsin mi?":"DHL sipariş kaydı oluşturulup Kargolandı aşamasına alınacak. Etiketi Kargolandı sekmesinden ayrıca oluşturabilirsiniz. Devam etmek istiyor musunuz?",confirmText:"Evet, Kargola",cancelText:"Vazgeç"});
-  if(!ok||busy.kargola.has(siparisNo)||preparingOrders.has(siparisNo))return;
+  const ok=await confirmModal({title:"Siparişi Kargola",text:"DHL sipariş kaydı oluşturulup Kargolandı aşamasına alınacak. Etiketi Kargolandı sekmesinden ayrıca oluşturabilirsiniz. Devam etmek istiyor musunuz?",confirmText:"Evet, Kargola",cancelText:"Vazgeç"});
+  if(!ok||busy.kargola.has(siparisNo))return;
   busy.kargola.add(siparisNo);
-  let preparedHere=false;
-  if(prepareFirst)preparingOrders.add(siparisNo);
   try{
     await ShippingApproval.assert(db,siparisNo);
-    if(prepareFirst){
-      const {data:order,error:readError}=await db.from(TABLE).select("*").eq("siparis_no",siparisNo).single();
-      if(readError)throw readError;
-      if(!["Bekliyor","Hazırlandı"].includes(order?.kargo_durumu))throw new Error("Siparişin aşaması değişmiş. Listeyi yenileyin.");
-      if(cargoEnvironment(order)==="test")throw new Error("Test gönderisi canlı bağlantıyla kargolanamaz.");
-      if(order.teslim_sekli_kontrol===true)throw new Error("Önce siparişin teslim şeklini kontrol edin.");
-      CargoWeights.parse(order.kargo_kg,order.kargo_adet);
-      if(order.kargo_durumu==="Bekliyor"){
-        const {data:updated,error}=await db.from(TABLE).update({kargo_durumu:"Hazırlandı"})
-          .eq("siparis_no",siparisNo).eq("kargo_durumu","Bekliyor").select("siparis_no");
-        if(error)throw error;
-        if(!updated?.length)throw new Error("Siparişin aşaması değişmiş. Listeyi yenileyin.");
-        preparedHere=true;
-      }
-    }
+    const {data:order,error:readError}=await db.from(TABLE).select("*").eq("siparis_no",siparisNo).single();
+    if(readError)throw readError;
+    if(!["Bekliyor","Hazırlandı"].includes(order?.kargo_durumu))throw new Error("Siparişin aşaması değişmiş. Listeyi yenileyin.");
+    if(cargoEnvironment(order)==="test")throw new Error("Test gönderisi canlı bağlantıyla kargolanamaz.");
+    if(order.teslim_sekli_kontrol===true)throw new Error("Önce siparişin teslim şeklini kontrol edin.");
+    CargoWeights.parse(order.kargo_kg,order.kargo_adet);
     const result=await cargoRequest(WH_KARGOLA,{operation:"kargola",siparis_no:String(siparisNo)});
     if(!result.already_created)db.functions.invoke("whatsapp-reaction",{body:{siparis_no:siparisNo,emoji:"🚚"}}).then(({error})=>{if(error)toast("Kargolandı; WhatsApp emojisi gönderilemedi.",6000);}).catch(()=>toast("WhatsApp emojisi gönderilemedi.",6000));
     toast(result.message||"Sipariş kargolandı. Etiketi ayrıca oluşturabilirsiniz.",6000);
@@ -2583,12 +2513,11 @@ async function sendToCargo(orderId,{prepareFirst=false,keepList=false}={}){
     else{closeModal();setTab("kargolandi","",true);}
     return true;
   }catch(error){
-    toast((preparedHere?"Sipariş hazırlandı; kargolama tamamlanamadı: ":"")+error.message,10000);
+    toast(error.message,10000);
     if(!keepList)await loadOrders(true);
-    else if(preparedHere)void refreshOperationCounts();
     return false;
   }
-  finally{busy.kargola.delete(siparisNo);if(prepareFirst)preparingOrders.delete(siparisNo);}
+  finally{busy.kargola.delete(siparisNo);}
 }
 
 function cargoLabelButtonText(order){
@@ -2945,7 +2874,7 @@ function clearSearch(){
    TAB / LOAD MORE / MOBİL MENÜ
 ============================================================ */
 function updateListHeading(search, summary) {
-  const titles = {web:"Web Siparişleri",bekleyen:"Bekleyen Siparişler", hazirlandi:"Hazırlanan Siparişler", kargolandi:"Kargolanan Siparişler", tamamlandi:"Tamamlanan Siparişler", iade:"İade Siparişleri", sorunlu:"Sorunlu Siparişler", iptal:"İptal Edilen Siparişler"};
+  const titles = {web:"Web Siparişleri",bekleyen:"Bekleyen Siparişler", kargolandi:"Kargolanan Siparişler", tamamlandi:"Tamamlanan Siparişler", iade:"İade Siparişleri", sorunlu:"Sorunlu Siparişler", iptal:"İptal Edilen Siparişler"};
   const title = document.getElementById("pageTitle");
   const info = document.getElementById("listSummary");
   const cargoTitles={all:"Tüm Kargolar",created:"Hazırlandı · Tüm Kargolar",transit:"Yolda · Tüm Kargolar",delivery:"Dağıtımda · Tüm Kargolar",delivered:"Teslim Edildi · Tüm Kargolar",problem:"Sorun · Tüm Kargolar",return:"Geri Geliyor · Tüm Kargolar"};
@@ -3124,10 +3053,7 @@ Object.assign(window, {
   openTrackingUrl,
   showErrorDetail,
 
-  setWaiting,
-  directShipFromDetail,
   sendToCargo,
-  shipPreparedFromList,
   directShipFromList,
   printBarcode,
   printReferenceLabel,
@@ -3175,10 +3101,9 @@ document.getElementById("shipmentQueryMenu").hidden = !isGaziAdmin;
 try { await loadOrderTakerNames(); } catch { toast("Kişi isimleri yüklenemedi. Sayfayı yenileyin."); }
 
 const requestedTab = new URLSearchParams(location.search).get("tab");
-if (["bekleyen","hazirlandi","kargolandi","tamamlandi","iade","sorunlu","iptal","web"].includes(requestedTab)) {
-  currentTab = requestedTab;
-  document.querySelectorAll(".menu li:not(.menu-more)").forEach(item => item.classList.toggle("active", item.id === "tab_" + currentTab));
-}
+if (requestedTab === "hazirlandi") currentTab = "bekleyen";
+else if (["bekleyen","kargolandi","tamamlandi","iade","sorunlu","iptal","web"].includes(requestedTab)) currentTab = requestedTab;
+document.querySelectorAll(".menu li:not(.menu-more)").forEach(item => item.classList.toggle("active", item.id === "tab_" + currentTab));
 
 
 
