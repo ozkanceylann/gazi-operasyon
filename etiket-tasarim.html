@@ -42,6 +42,10 @@
     .label-text{display:block;max-width:100%;max-height:100%;white-space:pre;overflow-wrap:normal;word-break:normal;line-height:1.15;text-align:left}
     .label-text.rotated{position:absolute;left:0;top:0;max-width:none;max-height:none;transform-origin:top left;white-space:pre}
     #labelStatus{min-height:20px;margin:10px 0 0;color:var(--ui-muted,#a5b7a6);font-size:12px}
+    .pdf-preview-panel{margin-top:20px}
+    .pdf-preview-panel[hidden]{display:none!important}
+    #pdfFrame{display:block;width:100%;height:min(70vh,720px);min-height:360px;border:1px solid var(--ui-line,#48604a);border-radius:10px;background:#fff}
+
     @media(max-width:900px){.label-layout{grid-template-columns:1fr}.page-viewport{max-height:55vh}}
     @media(max-width:600px){.label-maker{padding:68px 14px 20px}.label-card{padding:15px}.label-top h1{font-size:22px}.label-pair{gap:8px}}
     @media print{
@@ -80,16 +84,16 @@ NET: 5 Kg ℮</textarea>
           </label>
           <div class="choice-field">Yazı yönü
             <div class="choice-row" role="group" aria-label="Yazı yönü">
-              <button type="button" data-choice="text" data-value="horizontal" aria-pressed="true">Yatay</button>
-              <button type="button" data-choice="text" data-value="vertical" aria-pressed="false">Dikey</button>
+              <button type="button" data-choice="text" data-value="horizontal" aria-pressed="false">Yatay</button>
+              <button type="button" data-choice="text" data-value="vertical" aria-pressed="true">Dikey</button>
             </div>
           </div>
           <div class="label-pair">
             <label class="label-field" for="horizontalDivisions">Yatay bölme sayısı
-              <input id="horizontalDivisions" type="number" min="1" max="100" step="1" value="1" required>
+              <input id="horizontalDivisions" type="number" min="1" max="100" step="1" value="4" required>
             </label>
             <label class="label-field" for="verticalDivisions">Dikey bölme sayısı
-              <input id="verticalDivisions" type="number" min="1" max="100" step="1" value="4" required>
+              <input id="verticalDivisions" type="number" min="1" max="100" step="1" value="1" required>
             </label>
           </div>
           <div class="label-pair">
@@ -107,7 +111,7 @@ NET: 5 Kg ℮</textarea>
           <p id="capacitySummary" class="label-summary" aria-live="polite"></p>
           <p class="label-help">Yazdırma boyutu, girdiğiniz yatay × dikey ölçüdür. Yazıcı ayarlarında gerçek boyut (%100) seçin.</p>
           <div class="label-actions">
-            <button type="submit">Yazdır</button>
+            <button type="submit">PDF Oluştur ve Önizle</button>
             <button type="button" class="secondary" id="resetLabel">Varsayılana dön</button>
           </div>
         </form>
@@ -121,6 +125,18 @@ NET: 5 Kg ℮</textarea>
         <div class="page-viewport"><div id="previewSheet" class="sheet" aria-label="Etiket baskı önizlemesi"></div></div>
       </section>
     </div>
+    <section id="pdfPreviewPanel" class="label-card pdf-preview-panel" hidden aria-labelledby="pdfPreviewTitle">
+      <div class="label-preview-head">
+        <h2 id="pdfPreviewTitle">PDF önizleme</h2>
+        <span id="pdfPageSize"></span>
+      </div>
+      <iframe id="pdfFrame" title="Etiket PDF önizlemesi"></iframe>
+      <div class="label-actions">
+        <button type="button" id="downloadPdf">PDF indir</button>
+        <button type="button" id="printPdf">PDF'i aç / yazdır</button>
+        <button type="button" class="secondary" id="closePdf">Önizlemeyi kapat</button>
+      </div>
+    </section>
   </main>
   <script>
     (async function(){
@@ -137,7 +153,7 @@ NET: 5 Kg ℮</textarea>
       const fontSizeInput=document.getElementById('labelFontSize'),text=document.getElementById('labelText');
       const sheet=document.getElementById('previewSheet'),summary=document.getElementById('capacitySummary');
       const dimensions=document.getElementById('previewDimensions'),printRules=document.getElementById('printPageRules');
-      let textDirection='horizontal';
+      let textDirection='vertical',currentPdfUrl=null;
       function positive(input,fallback){const n=Number(input.value);return Number.isFinite(n)&&n>0?n:fallback;}
       function fitFontSize(value,boxW,boxH,rotated,requestedPt){
         const availableW=Math.max(1,(rotated?boxH:boxW)*96/25.4-4);
@@ -187,26 +203,116 @@ NET: 5 Kg ℮</textarea>
           cell.appendChild(content);sheet.appendChild(cell);
         }
       }
-      document.getElementById('labelForm').addEventListener('input',draw);
+      function clearPdfPreview(){
+        document.getElementById('pdfPreviewPanel').hidden=true;
+        document.getElementById('pdfFrame').removeAttribute('src');
+        if(currentPdfUrl){URL.revokeObjectURL(currentPdfUrl);currentPdfUrl=null;}
+      }
+      function canvasToPdf(canvas,pageWmm,pageHmm){
+        const jpeg=canvas.toDataURL('image/jpeg',0.98);
+        const binary=atob(jpeg.slice(jpeg.indexOf(',')+1));
+        const imageBytes=new Uint8Array(binary.length);
+        for(let i=0;i<binary.length;i++)imageBytes[i]=binary.charCodeAt(i);
+        const enc=new TextEncoder(),parts=[];
+        let offset=0;
+        function push(bytes){parts.push(bytes);offset+=bytes.length;}
+        function pushText(value){push(enc.encode(value));}
+        const header=new Uint8Array([37,80,68,70,45,49,46,52,10,37,226,227,207,211,10]);
+        push(header);
+        const offsets=[0];
+        offsets[1]=offset;pushText('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+        offsets[2]=offset;pushText('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
+        const pageWpt=pageWmm*72/25.4,pageHpt=pageHmm*72/25.4;
+        offsets[3]=offset;pushText('3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+pageWpt+' '+pageHpt+'] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\nendobj\n');
+        offsets[4]=offset;
+        pushText('4 0 obj\n<< /Type /XObject /Subtype /Image /Width '+canvas.width+' /Height '+canvas.height+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+imageBytes.length+' >>\nstream\n');
+        push(imageBytes);pushText('\nendstream\nendobj\n');
+        const stream=enc.encode('q\n'+pageWpt+' 0 0 '+pageHpt+' 0 0 cm\n/Im0 Do\nQ\n');
+        offsets[5]=offset;pushText('5 0 obj\n<< /Length '+stream.length+' >>\nstream\n');push(stream);pushText('endstream\nendobj\n');
+        const xrefOffset=offset;
+        let xref='xref\n0 6\n0000000000 65535 f \n';
+        for(let i=1;i<=5;i++)xref+=String(offsets[i]).padStart(10,'0')+' 00000 n \n';
+        xref+='trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+xrefOffset+'\n%%EOF';
+        pushText(xref);
+        const pdfBytes=new Uint8Array(offset);let cursor=0;
+        for(const part of parts){pdfBytes.set(part,cursor);cursor+=part.length;}
+        return new Blob([pdfBytes],{type:'application/pdf'});
+      }
+      function renderPdfCanvas(){
+        const w=positive(width,60),h=positive(height,30);
+        const columns=Math.min(100,Math.max(1,Math.floor(positive(columnsInput,4))));
+        const rows=Math.min(100,Math.max(1,Math.floor(positive(rowsInput,1))));
+        const gapX=Math.max(0,Number(horizontalGapInput.value)||0),gapY=Math.max(0,Number(verticalGapInput.value)||0);
+        const segmentW=Math.max(0,(w-gapX*(columns-1))/columns);
+        const segmentH=Math.max(0,(h-gapY*(rows-1))/rows);
+        const dpi=300,scale=dpi/25.4;
+        const canvas=document.createElement('canvas');
+        canvas.width=Math.max(1,Math.round(w*scale));canvas.height=Math.max(1,Math.round(h*scale));
+        const ctx=canvas.getContext('2d',{alpha:false});
+        ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+        const value=text.value,lines=value.split(/\r\n|\n|\r/);
+        const rotated=textDirection==='vertical';
+        const cssFont=fitFontSize(value,segmentW,segmentH,rotated,fontSizeInput.value);
+        const fontPx=cssFont*dpi/96,lineHeight=fontPx*1.15;
+        ctx.fillStyle='#111';ctx.strokeStyle='#777';ctx.lineWidth=Math.max(1,.2*scale);
+        for(let row=0;row<rows;row++)for(let col=0;col<columns;col++){
+          const xMm=col*(segmentW+gapX),yMm=row*(segmentH+gapY);
+          const x=xMm*scale,y=yMm*scale,cw=segmentW*scale,ch=segmentH*scale;
+          ctx.strokeRect(x+.1*scale,y+.1*scale,Math.max(0,cw-.2*scale),Math.max(0,ch-.2*scale));
+          ctx.save();
+          if(rotated){ctx.translate(x+cw,y);ctx.rotate(Math.PI/2);}
+          else ctx.translate(x,y);
+          ctx.font='700 '+(cssFont*25.4/96)+'px Arial';ctx.textAlign='left';ctx.textBaseline='top';
+          const pad=.25*scale;
+          for(let i=0;i<lines.length;i++)ctx.fillText(lines[i],pad,pad+i*lineHeight);
+          ctx.restore();
+        }
+        return {canvas,width:w,height:h};
+      }
+      function createPdfPreview(){
+        clearPdfPreview();
+        if(!text.value.trim()){status.textContent='PDF hazırlamak için etiket metni girin.';text.focus();return;}
+        status.textContent='Etiket boyutunda PDF hazırlanıyor…';
+        try{
+          const rendered=renderPdfCanvas();
+          const blob=canvasToPdf(rendered.canvas,rendered.width,rendered.height);
+          currentPdfUrl=URL.createObjectURL(blob);
+          document.getElementById('pdfFrame').src=currentPdfUrl;
+          const sizeTag=Math.round(rendered.width*10)/10+'x'+Math.round(rendered.height*10)/10+'mm';
+          const download=document.getElementById('downloadPdf');
+          download.onclick=()=>{
+            const link=document.createElement('a');link.href=currentPdfUrl;link.download='etiket-'+sizeTag+'.pdf';link.click();
+          };
+          document.getElementById('pdfPageSize').textContent=sizeTag+' · Tek sayfa';
+          document.getElementById('pdfPreviewPanel').hidden=false;
+          status.textContent='PDF hazır. Önizlemeden etiketi kontrol edip indirebilir veya yazdırabilirsiniz.';
+          document.getElementById('pdfPreviewPanel').scrollIntoView({behavior:'smooth',block:'start'});
+        }catch(error){
+          console.error(error);
+          status.textContent='PDF hazırlanamadı. Ayarları kontrol edip yeniden deneyin.';
+        }
+      }
+      document.getElementById('labelForm').addEventListener('input',()=>{clearPdfPreview();draw();});
       document.querySelectorAll('[data-choice="text"]').forEach(button=>button.addEventListener('click',()=>{
         textDirection=button.dataset.value;
         document.querySelectorAll('[data-choice="text"]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
-        draw();
+        clearPdfPreview();draw();
       }));
       document.getElementById('labelForm').addEventListener('submit',event=>{
-        event.preventDefault();
-        if(!text.value.trim()){status.textContent='Yazdırmak için etiket metni girin.';text.focus();return;}
-        status.textContent='Yazdırma penceresi açılıyor…';
-        window.print();
-        setTimeout(()=>{status.textContent='Yazdırma tamamlandıysa etiketi yazıcıdan alabilirsiniz.';},500);
+        event.preventDefault();createPdfPreview();
       });
+      document.getElementById('printPdf').addEventListener('click',()=>{
+        if(!currentPdfUrl)return;
+        const opened=window.open(currentPdfUrl,'_blank');
+        if(!opened)status.textContent='PDF önizlemesi açık. PDF görüntüleyicisindeki yazdır düğmesini kullanın.';
+      });
+      document.getElementById('closePdf').addEventListener('click',clearPdfPreview);
       document.getElementById('resetLabel').addEventListener('click',()=>{
-        width.value='60';height.value='30';columnsInput.value='1';rowsInput.value='4';horizontalGapInput.value='0';verticalGapInput.value='0';fontSizeInput.value='12';text.value='ÜRT. T: 20.11.2026\nS.K.T. : 20.11.2028\nNET: 5 Kg ℮';
-        textDirection='horizontal';
-        document.querySelectorAll('[data-choice="text"]').forEach(item=>item.setAttribute('aria-pressed',String(item.dataset.value==='horizontal')));
+        clearPdfPreview();width.value='60';height.value='30';columnsInput.value='4';rowsInput.value='1';horizontalGapInput.value='0';verticalGapInput.value='0';fontSizeInput.value='12';text.value='ÜRT. T: 20.11.2026\nS.K.T. : 20.11.2028\nNET: 5 Kg ℮';
+        textDirection='vertical';
+        document.querySelectorAll('[data-choice="text"]').forEach(item=>item.setAttribute('aria-pressed',String(item.dataset.value==='vertical')));
         draw();
       });
-      window.addEventListener('beforeprint',draw);
       draw();
     })();
   </script>
