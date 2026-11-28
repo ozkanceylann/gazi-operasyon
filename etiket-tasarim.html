@@ -262,7 +262,7 @@ NET: 5 Kg ℮</textarea>
           ctx.save();
           if(rotated){ctx.translate(x+cw,y);ctx.rotate(Math.PI/2);}
           else ctx.translate(x,y);
-          ctx.font='700 '+(cssFont*25.4/96)+'px Arial';ctx.textAlign='left';ctx.textBaseline='top';
+          ctx.font='700 '+fontPx+'px Arial';ctx.textAlign='left';ctx.textBaseline='top';
           const pad=.25*scale;
           for(let i=0;i<lines.length;i++)ctx.fillText(lines[i],pad,pad+i*lineHeight);
           ctx.restore();
