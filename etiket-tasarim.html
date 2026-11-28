@@ -76,21 +76,19 @@
             <textarea id="labelText" maxlength="5000" placeholder="Ürt2026 SKT2028">Ürt2026 SKT2028</textarea>
             <small>Enter aynı bölmenin içinde alt satıra geçirir. Girilen metin seçtiğiniz bölme sayısı kadar tekrarlanır.</small>
           </label>
-          <label class="label-field" for="labelQuantity">Etiket içindeki tekrar sayısı
-            <input id="labelQuantity" type="number" min="1" max="100" step="1" value="4" required>
-          </label>
-          <div class="choice-field">Bölme yönü
-            <div class="choice-row" role="group" aria-label="Bölme yönü">
-              <button type="button" data-choice="layout" data-value="vertical" aria-pressed="true">Dikey sıra</button>
-              <button type="button" data-choice="layout" data-value="horizontal" aria-pressed="false">Yatay sıra</button>
-            </div>
-            <small class="label-help">Dikey sıra metinleri üstten alta, yatay sıra soldan sağa böler.</small>
-          </div>
           <div class="choice-field">Yazı yönü
             <div class="choice-row" role="group" aria-label="Yazı yönü">
               <button type="button" data-choice="text" data-value="horizontal" aria-pressed="true">Yatay</button>
               <button type="button" data-choice="text" data-value="vertical" aria-pressed="false">Dikey</button>
             </div>
+          </div>
+          <div class="label-pair">
+            <label class="label-field" for="horizontalDivisions">Yatay bölme sayısı
+              <input id="horizontalDivisions" type="number" min="1" max="100" step="1" value="1" required>
+            </label>
+            <label class="label-field" for="verticalDivisions">Dikey bölme sayısı
+              <input id="verticalDivisions" type="number" min="1" max="100" step="1" value="4" required>
+            </label>
           </div>
           <p id="capacitySummary" class="label-summary" aria-live="polite"></p>
           <p class="label-help">Yazdırma boyutu, girdiğiniz yatay × dikey ölçüdür. Yazıcı ayarlarında gerçek boyut (%100) seçin.</p>
@@ -120,10 +118,10 @@
         status.textContent='';
       }catch(error){status.textContent=error.message||'Oturum doğrulanamadı.';return;}
       const width=document.getElementById('labelWidth'),height=document.getElementById('labelHeight');
-      const quantity=document.getElementById('labelQuantity'),text=document.getElementById('labelText');
+      const columnsInput=document.getElementById('horizontalDivisions'),rowsInput=document.getElementById('verticalDivisions'),text=document.getElementById('labelText');
       const sheet=document.getElementById('previewSheet'),summary=document.getElementById('capacitySummary');
       const dimensions=document.getElementById('previewDimensions'),printRules=document.getElementById('printPageRules');
-      let layout='vertical',textDirection='horizontal';
+      let textDirection='horizontal';
       function positive(input,fallback){const n=Number(input.value);return Number.isFinite(n)&&n>0?n:fallback;}
       function fitFontSize(value,boxW,boxH,rotated){
         const availableW=(rotated?boxH:boxW)*96/25.4-4;
@@ -138,18 +136,18 @@
         return Math.max(5,Math.min(16,size));
       }
       function draw(){
-        const w=positive(width,60),h=positive(height,30),count=Math.min(100,Math.max(1,Math.floor(positive(quantity,4))));
+        const w=positive(width,60),h=positive(height,30);
+        const columns=Math.min(100,Math.max(1,Math.floor(positive(columnsInput,1))));
+        const rows=Math.min(100,Math.max(1,Math.floor(positive(rowsInput,4))));
+        const count=columns*rows;
         sheet.replaceChildren();
         sheet.style.width=w+'mm';sheet.style.height=h+'mm';
-        sheet.style.gridTemplateColumns=layout==='vertical'?'1fr':'repeat('+count+',1fr)';
-        sheet.style.gridTemplateRows=layout==='vertical'?'repeat('+count+',1fr)':'1fr';
+        sheet.style.gridTemplateColumns='repeat('+columns+',1fr)';
+        sheet.style.gridTemplateRows='repeat('+rows+',1fr)';
         printRules.textContent='@page{size:'+w+'mm '+h+'mm;margin:0}';
         dimensions.textContent=w+' × '+h+' mm';
-        const segmentW=layout==='vertical'?w:w/count;
-        const segmentH=layout==='vertical'?h/count:h;
-        summary.textContent=layout==='vertical'
-          ? 'Etiket '+count+' yatay bölmeye ayrılır; her bölme '+w+' × '+(h/count).toFixed(1)+' mm olur.'
-          : 'Etiket '+count+' dikey bölmeye ayrılır; her bölme '+(w/count).toFixed(1)+' × '+h+' mm olur.';
+        const segmentW=w/columns,segmentH=h/rows;
+        summary.textContent='Etiket '+columns+' yatay × '+rows+' dikey bölmeye ayrılır; toplam '+count+' bölme. Her bölme '+segmentW.toFixed(1)+' × '+segmentH.toFixed(1)+' mm olur.';
         const value=text.value;
         for(let i=0;i<count;i++){
           const cell=document.createElement('div');cell.className='label-item';
@@ -160,10 +158,9 @@
         }
       }
       document.getElementById('labelForm').addEventListener('input',draw);
-      document.querySelectorAll('[data-choice]').forEach(button=>button.addEventListener('click',()=>{
-        const group=button.dataset.choice,value=button.dataset.value;
-        document.querySelectorAll('[data-choice="'+group+'"]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
-        if(group==='layout')layout=value;else textDirection=value;
+      document.querySelectorAll('[data-choice="text"]').forEach(button=>button.addEventListener('click',()=>{
+        textDirection=button.dataset.value;
+        document.querySelectorAll('[data-choice="text"]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
         draw();
       }));
       document.getElementById('labelForm').addEventListener('submit',event=>{
@@ -174,9 +171,9 @@
         setTimeout(()=>{status.textContent='Yazdırma tamamlandıysa etiketi yazıcıdan alabilirsiniz.';},500);
       });
       document.getElementById('resetLabel').addEventListener('click',()=>{
-        width.value='60';height.value='30';quantity.value='4';text.value='Ürt2026 SKT2028';
-        layout='vertical';textDirection='horizontal';
-        document.querySelectorAll('[data-choice]').forEach(item=>item.setAttribute('aria-pressed',String(item.dataset.value===(item.dataset.choice==='layout'?'vertical':'horizontal'))));
+        width.value='60';height.value='30';columnsInput.value='1';rowsInput.value='4';text.value='Ürt2026 SKT2028';
+        textDirection='horizontal';
+        document.querySelectorAll('[data-choice="text"]').forEach(item=>item.setAttribute('aria-pressed',String(item.dataset.value==='horizontal')));
         draw();
       });
       window.addEventListener('beforeprint',draw);
