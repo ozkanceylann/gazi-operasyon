@@ -73,7 +73,9 @@
             </label>
           </div>
           <label class="label-field" for="labelText">Etikette yazacak metin
-            <textarea id="labelText" maxlength="5000" placeholder="Ürt2026 SKT2028">Ürt2026 SKT2028</textarea>
+            <textarea id="labelText" maxlength="5000" placeholder="ÜRT. T: 20.11.2026">ÜRT. T: 20.11.2026
+S.K.T. : 20.11.2028
+NET: 5 Kg ℮</textarea>
             <small>Enter aynı bölmenin içinde alt satıra geçirir. Girilen metin seçtiğiniz bölme sayısı kadar tekrarlanır.</small>
           </label>
           <div class="choice-field">Yazı yönü
@@ -171,7 +173,7 @@
         setTimeout(()=>{status.textContent='Yazdırma tamamlandıysa etiketi yazıcıdan alabilirsiniz.';},500);
       });
       document.getElementById('resetLabel').addEventListener('click',()=>{
-        width.value='60';height.value='30';columnsInput.value='1';rowsInput.value='4';text.value='Ürt2026 SKT2028';
+        width.value='60';height.value='30';columnsInput.value='1';rowsInput.value='4';text.value='ÜRT. T: 20.11.2026\nS.K.T. : 20.11.2028\nNET: 5 Kg ℮';
         textDirection='horizontal';
         document.querySelectorAll('[data-choice="text"]').forEach(item=>item.setAttribute('aria-pressed',String(item.dataset.value==='horizontal')));
         draw();
