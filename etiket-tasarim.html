@@ -39,8 +39,8 @@
     .page-viewport{padding:16px;border-radius:12px;background:#101a13;overflow:auto;max-height:75vh}
     .sheet{box-sizing:content-box;padding:0;background:#fff;color:#111;box-shadow:0 3px 18px #0004;display:grid;overflow:hidden;flex:none}
     .label-item{box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:hidden;border:.2mm solid #aaa;padding:.6mm;color:#111;font-family:Arial,sans-serif;font-weight:700}
-    .label-text{display:block;max-width:100%;max-height:100%;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;line-height:1.15;text-align:center}
-    .label-text.rotated{transform:rotate(90deg);white-space:pre-wrap}
+    .label-text{display:block;max-width:100%;max-height:100%;white-space:pre;overflow-wrap:normal;word-break:normal;line-height:1.15;text-align:center}
+    .label-text.rotated{transform:rotate(90deg);white-space:pre}
     #labelStatus{min-height:20px;margin:10px 0 0;color:var(--ui-muted,#a5b7a6);font-size:12px}
     @media(max-width:900px){.label-layout{grid-template-columns:1fr}.page-viewport{max-height:55vh}}
     @media(max-width:600px){.label-maker{padding:68px 14px 20px}.label-card{padding:15px}.label-top h1{font-size:22px}.label-pair{gap:8px}}
@@ -140,17 +140,19 @@ NET: 5 Kg ℮</textarea>
       let textDirection='horizontal';
       function positive(input,fallback){const n=Number(input.value);return Number.isFinite(n)&&n>0?n:fallback;}
       function fitFontSize(value,boxW,boxH,rotated,requestedPt){
-        const availableW=(rotated?boxH:boxW)*96/25.4-4;
-        const availableH=(rotated?boxW:boxH)*96/25.4-4;
-        const lines=value.split(/\r?\n/);
+        const availableW=Math.max(1,(rotated?boxH:boxW)*96/25.4-4);
+        const availableH=Math.max(1,(rotated?boxW:boxH)*96/25.4-4);
+        const lines=value.split(/\r\n|\n|\r/);
         const maxSize=Math.min(72,Math.max(4,Number(requestedPt)||12))*96/72;
+        const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
         let size=maxSize;
-        for(;size>4;size-=.5){
-          const charsPerLine=Math.max(1,Math.floor(availableW/(size*.58)));
-          const wrapped=lines.reduce((total,line)=>total+Math.max(1,Math.ceil(line.length/charsPerLine)),0);
-          if(wrapped*size*1.2<=availableH)break;
+        for(;size>1;size-=.25){
+          ctx.font='700 '+size+'px Arial';
+          const widest=lines.reduce((max,line)=>Math.max(max,ctx.measureText(line).width),0);
+          const textHeight=lines.length*size*1.15;
+          if(widest<=availableW&&textHeight<=availableH)break;
         }
-        return Math.max(4,Math.min(maxSize,size));
+        return Math.max(1,Math.min(maxSize,size));
       }
       function draw(){
         const w=positive(width,60),h=positive(height,30);
