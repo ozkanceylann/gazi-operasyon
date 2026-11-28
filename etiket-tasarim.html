@@ -100,6 +100,10 @@ NET: 5 Kg ℮</textarea>
               <input id="verticalGap" type="number" min="0" max="100" step="0.5" value="0" required>
             </label>
           </div>
+          <label class="label-field" for="labelFontSize">Yazı puntosu
+            <input id="labelFontSize" type="number" min="4" max="72" step="0.5" value="12" required>
+            <small>Seçilen punto bölmeye sığmazsa yazı otomatik küçültülür.</small>
+          </label>
           <p id="capacitySummary" class="label-summary" aria-live="polite"></p>
           <p class="label-help">Yazdırma boyutu, girdiğiniz yatay × dikey ölçüdür. Yazıcı ayarlarında gerçek boyut (%100) seçin.</p>
           <div class="label-actions">
@@ -129,22 +133,24 @@ NET: 5 Kg ℮</textarea>
       }catch(error){status.textContent=error.message||'Oturum doğrulanamadı.';return;}
       const width=document.getElementById('labelWidth'),height=document.getElementById('labelHeight');
       const columnsInput=document.getElementById('horizontalDivisions'),rowsInput=document.getElementById('verticalDivisions');
-      const horizontalGapInput=document.getElementById('horizontalGap'),verticalGapInput=document.getElementById('verticalGap'),text=document.getElementById('labelText');
+      const horizontalGapInput=document.getElementById('horizontalGap'),verticalGapInput=document.getElementById('verticalGap');
+      const fontSizeInput=document.getElementById('labelFontSize'),text=document.getElementById('labelText');
       const sheet=document.getElementById('previewSheet'),summary=document.getElementById('capacitySummary');
       const dimensions=document.getElementById('previewDimensions'),printRules=document.getElementById('printPageRules');
       let textDirection='horizontal';
       function positive(input,fallback){const n=Number(input.value);return Number.isFinite(n)&&n>0?n:fallback;}
-      function fitFontSize(value,boxW,boxH,rotated){
+      function fitFontSize(value,boxW,boxH,rotated,requestedPt){
         const availableW=(rotated?boxH:boxW)*96/25.4-4;
         const availableH=(rotated?boxW:boxH)*96/25.4-4;
         const lines=value.split(/\r?\n/);
-        let size=16;
-        for(;size>5;size-=.5){
+        const maxSize=Math.min(72,Math.max(4,Number(requestedPt)||12))*96/72;
+        let size=maxSize;
+        for(;size>4;size-=.5){
           const charsPerLine=Math.max(1,Math.floor(availableW/(size*.58)));
           const wrapped=lines.reduce((total,line)=>total+Math.max(1,Math.ceil(line.length/charsPerLine)),0);
           if(wrapped*size*1.2<=availableH)break;
         }
-        return Math.max(5,Math.min(16,size));
+        return Math.max(4,Math.min(maxSize,size));
       }
       function draw(){
         const w=positive(width,60),h=positive(height,30);
@@ -168,7 +174,7 @@ NET: 5 Kg ℮</textarea>
           const cell=document.createElement('div');cell.className='label-item';
           const content=document.createElement('span');content.className='label-text';
           content.textContent=value;content.classList.toggle('rotated',textDirection==='vertical');
-          content.style.fontSize=fitFontSize(value,segmentW,segmentH,textDirection==='vertical')+'px';
+          content.style.fontSize=fitFontSize(value,segmentW,segmentH,textDirection==='vertical',fontSizeInput.value)+'px';
           cell.appendChild(content);sheet.appendChild(cell);
         }
       }
@@ -186,7 +192,7 @@ NET: 5 Kg ℮</textarea>
         setTimeout(()=>{status.textContent='Yazdırma tamamlandıysa etiketi yazıcıdan alabilirsiniz.';},500);
       });
       document.getElementById('resetLabel').addEventListener('click',()=>{
-        width.value='60';height.value='30';columnsInput.value='1';rowsInput.value='4';horizontalGapInput.value='0';verticalGapInput.value='0';text.value='ÜRT. T: 20.11.2026\nS.K.T. : 20.11.2028\nNET: 5 Kg ℮';
+        width.value='60';height.value='30';columnsInput.value='1';rowsInput.value='4';horizontalGapInput.value='0';verticalGapInput.value='0';fontSizeInput.value='12';text.value='ÜRT. T: 20.11.2026\nS.K.T. : 20.11.2028\nNET: 5 Kg ℮';
         textDirection='horizontal';
         document.querySelectorAll('[data-choice="text"]').forEach(item=>item.setAttribute('aria-pressed',String(item.dataset.value==='horizontal')));
         draw();
