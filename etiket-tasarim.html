@@ -68,8 +68,8 @@
             </label>
           </div>
           <label class="label-field" for="labelText">Etikette yazacak metin veya barkodlar
-            <textarea id="labelText" maxlength="5000" placeholder="Ürt2026 SKT2028&#10;Her satır ayrı bir etiket olur; tek satır varsa tüm etiketlere aynı metin basılır.">Ürt2026 SKT2028</textarea>
-            <small>Uzun içerikler etiketin içinde satırlara bölünür. Birden fazla satır girerseniz metinler dikey sırayla etiketlere yerleştirilir.</small>
+            <textarea id="labelText" maxlength="5000" placeholder="Ürt2026 SKT2028">Ürt2026 SKT2028</textarea>
+            <small>Enter ile aynı etiket içinde alt satıra geçebilirsiniz. Metnin tamamı, belirttiğiniz adet kadar etikete basılır.</small>
           </label>
           <div class="label-pair">
             <label class="label-field" for="labelQuantity">Basılacak etiket
@@ -112,7 +112,7 @@
       const capacitySummary=document.getElementById('capacitySummary'),pageCapacity=document.getElementById('pageCapacity');
       const PAGE_W=200,PAGE_H=287;
       function positive(input,fallback){const n=Number(input.value);return Number.isFinite(n)&&n>0?n:fallback;}
-      function contentLines(){return text.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);}
+      function contentLines(){const value=text.value.trim();return value?[value]:[];}
       function makeCell(target,i,values,w,h){
         const cell=document.createElement('div');cell.className='label-item';
         const value=values.length?values[i%values.length]:'Önizleme metni';
