@@ -92,6 +92,14 @@ NET: 5 Kg ℮</textarea>
               <input id="verticalDivisions" type="number" min="1" max="100" step="1" value="4" required>
             </label>
           </div>
+          <div class="label-pair">
+            <label class="label-field" for="horizontalGap">Yatay aralık (mm)
+              <input id="horizontalGap" type="number" min="0" max="100" step="0.5" value="0" required>
+            </label>
+            <label class="label-field" for="verticalGap">Dikey aralık (mm)
+              <input id="verticalGap" type="number" min="0" max="100" step="0.5" value="0" required>
+            </label>
+          </div>
           <p id="capacitySummary" class="label-summary" aria-live="polite"></p>
           <p class="label-help">Yazdırma boyutu, girdiğiniz yatay × dikey ölçüdür. Yazıcı ayarlarında gerçek boyut (%100) seçin.</p>
           <div class="label-actions">
@@ -120,7 +128,8 @@ NET: 5 Kg ℮</textarea>
         status.textContent='';
       }catch(error){status.textContent=error.message||'Oturum doğrulanamadı.';return;}
       const width=document.getElementById('labelWidth'),height=document.getElementById('labelHeight');
-      const columnsInput=document.getElementById('horizontalDivisions'),rowsInput=document.getElementById('verticalDivisions'),text=document.getElementById('labelText');
+      const columnsInput=document.getElementById('horizontalDivisions'),rowsInput=document.getElementById('verticalDivisions');
+      const horizontalGapInput=document.getElementById('horizontalGap'),verticalGapInput=document.getElementById('verticalGap'),text=document.getElementById('labelText');
       const sheet=document.getElementById('previewSheet'),summary=document.getElementById('capacitySummary');
       const dimensions=document.getElementById('previewDimensions'),printRules=document.getElementById('printPageRules');
       let textDirection='horizontal';
@@ -141,15 +150,19 @@ NET: 5 Kg ℮</textarea>
         const w=positive(width,60),h=positive(height,30);
         const columns=Math.min(100,Math.max(1,Math.floor(positive(columnsInput,1))));
         const rows=Math.min(100,Math.max(1,Math.floor(positive(rowsInput,4))));
+        const horizontalGap=Math.max(0,Number(horizontalGapInput.value)||0);
+        const verticalGap=Math.max(0,Number(verticalGapInput.value)||0);
         const count=columns*rows;
         sheet.replaceChildren();
         sheet.style.width=w+'mm';sheet.style.height=h+'mm';
-        sheet.style.gridTemplateColumns='repeat('+columns+',1fr)';
-        sheet.style.gridTemplateRows='repeat('+rows+',1fr)';
+        sheet.style.gridTemplateColumns='repeat('+columns+',minmax(0,1fr))';
+        sheet.style.gridTemplateRows='repeat('+rows+',minmax(0,1fr))';
+        sheet.style.columnGap=horizontalGap+'mm';sheet.style.rowGap=verticalGap+'mm';
         printRules.textContent='@page{size:'+w+'mm '+h+'mm;margin:0}';
         dimensions.textContent=w+' × '+h+' mm';
-        const segmentW=w/columns,segmentH=h/rows;
-        summary.textContent='Etiket '+columns+' yatay × '+rows+' dikey bölmeye ayrılır; toplam '+count+' bölme. Her bölme '+segmentW.toFixed(1)+' × '+segmentH.toFixed(1)+' mm olur.';
+        const segmentW=Math.max(0,(w-horizontalGap*(columns-1))/columns);
+        const segmentH=Math.max(0,(h-verticalGap*(rows-1))/rows);
+        summary.textContent='Etiket '+columns+' yatay × '+rows+' dikey bölme; toplam '+count+' bölme. Yatay aralık '+horizontalGap+' mm, dikey aralık '+verticalGap+' mm. Her bölme '+segmentW.toFixed(1)+' × '+segmentH.toFixed(1)+' mm.';
         const value=text.value;
         for(let i=0;i<count;i++){
           const cell=document.createElement('div');cell.className='label-item';
@@ -173,7 +186,7 @@ NET: 5 Kg ℮</textarea>
         setTimeout(()=>{status.textContent='Yazdırma tamamlandıysa etiketi yazıcıdan alabilirsiniz.';},500);
       });
       document.getElementById('resetLabel').addEventListener('click',()=>{
-        width.value='60';height.value='30';columnsInput.value='1';rowsInput.value='4';text.value='ÜRT. T: 20.11.2026\nS.K.T. : 20.11.2028\nNET: 5 Kg ℮';
+        width.value='60';height.value='30';columnsInput.value='1';rowsInput.value='4';horizontalGapInput.value='0';verticalGapInput.value='0';text.value='ÜRT. T: 20.11.2026\nS.K.T. : 20.11.2028\nNET: 5 Kg ℮';
         textDirection='horizontal';
         document.querySelectorAll('[data-choice="text"]').forEach(item=>item.setAttribute('aria-pressed',String(item.dataset.value==='horizontal')));
         draw();
