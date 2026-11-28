@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Etiket Tasarımı · Gazi Operasyon</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="style.css?v=20261126-shipping-control-fullwidth">
+  <link rel="stylesheet" href="theme.css?v=20261121-web-orders-94">
+  <link rel="stylesheet" href="viewport-lock.css?v=20261025-fixed-screen-1">
+  <script src="viewport-lock.js?v=20261025-fixed-screen-1"></script>
+  <style>
+    .label-maker{max-width:1440px;margin:0 auto;padding:24px}
+    .label-top{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+    .label-top a{color:var(--ui-accent-ink,#efd39b);text-decoration:none}
+    .label-top h1{margin:0;color:var(--ui-ink,#f4f1e5);font-size:26px}
+    .label-layout{display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);gap:20px;align-items:start}
+    .label-card{background:var(--ui-paper,#142219);border:1px solid var(--ui-line,#48604a);border-radius:16px;padding:20px;box-shadow:0 6px 18px #0002}
+    .label-card h2{margin:0 0 16px;font-size:17px;color:var(--ui-accent-ink,#efd39b)}
+    .label-form{display:grid;gap:14px}
+    .label-field{display:grid;gap:6px;color:var(--ui-ink,#f4f1e5);font-size:13px;font-weight:650}
+    .label-field input,.label-field textarea,.label-field select{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--ui-line,#48604a);border-radius:9px;background:var(--ui-inset,#182b1e);color:var(--ui-ink,#f4f1e5);font:inherit}
+    .label-field textarea{min-height:116px;resize:vertical;line-height:1.5}
+    .label-field small,.label-help{font-size:12px;font-weight:400;line-height:1.5;color:var(--ui-muted,#a5b7a6)}
+    .label-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .label-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:2px}
+    .label-actions button{padding:11px 16px;border:1px solid #d4a857;border-radius:10px;background:linear-gradient(110deg,#dfbd78,#c89845);color:#1a2a1f;font:inherit;font-weight:750;cursor:pointer}
+    .label-actions button.secondary{background:#223728;color:#f4f1e5;border-color:#48604a}
+    .label-summary{margin:0;padding:12px;border-radius:10px;background:#1a2c20;color:var(--ui-ink,#f4f1e5);font-size:13px;line-height:1.5}
+    .label-preview-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+    .label-preview-head h2{margin:0}
+    #pageCapacity{color:var(--ui-accent-ink,#efd39b);font-size:13px;font-weight:700;text-align:right}
+    .page-viewport{padding:16px;border-radius:12px;background:#101a13;overflow:auto;max-height:75vh}
+    .sheet{width:200mm;height:287mm;padding:0;background:#fff;color:#111;box-shadow:0 3px 18px #0004;display:grid;align-content:start;justify-content:start;overflow:hidden;flex:none}.print-sheets{display:none}
+    .label-item{box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;white-space:pre-wrap;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;line-height:1.15;color:#111;border:0.2mm solid #c9c9c9;padding:1.5mm;font-family:Arial,sans-serif;font-weight:700}
+    #labelStatus{min-height:20px;margin:10px 0 0;color:var(--ui-muted,#a5b7a6);font-size:12px}
+    @media(max-width:900px){.label-layout{grid-template-columns:1fr}.page-viewport{max-height:55vh}}
+    @media(max-width:600px){.label-maker{padding:68px 14px 20px}.label-card{padding:15px}.label-top h1{font-size:22px}.label-pair{gap:8px}}
+    @media print{
+      @page{size:A4 portrait;margin:5mm}
+      html,body{margin:0!important;padding:0!important;background:#fff!important;color:#111!important}
+      .label-maker{max-width:none;margin:0;padding:0}
+      .label-top,.label-controls,.label-preview-head,#labelStatus,.page-viewport{display:none!important}.print-sheets{display:block!important}
+      .label-layout,.label-card{display:block!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;max-height:none!important;overflow:visible!important;background:#fff!important}
+      .sheet{width:200mm!important;height:287mm!important;margin:0!important;padding:0!important;box-shadow:none!important;overflow:hidden!important;break-after:page;page-break-after:always}
+      .sheet:last-child{break-after:auto;page-break-after:auto}
+      .label-item{border:.2mm solid #aaa!important}
+    }
+  </style>
+</head>
+<body class="orders-page">
+  <main class="label-maker">
+    <header class="label-top">
+      <a href="index.html">← Siparişlere dön</a>
+      <h1>Etiket Tasarımı ve Yazdırma</h1>
+    </header>
+    <div class="label-layout">
+      <section class="label-card label-controls" aria-labelledby="designTitle">
+        <h2 id="designTitle">Etiket bilgileri</h2>
+        <form id="labelForm" class="label-form">
+          <div class="label-pair">
+            <label class="label-field" for="labelWidth">Yatay ölçü (mm)
+              <input id="labelWidth" type="number" min="5" max="200" step="0.5" value="60" required>
+            </label>
+            <label class="label-field" for="labelHeight">Dikey ölçü (mm)
+              <input id="labelHeight" type="number" min="5" max="287" step="0.5" value="40" required>
+            </label>
+          </div>
+          <label class="label-field" for="labelText">Etikette yazacak metin veya barkodlar
+            <textarea id="labelText" maxlength="5000" placeholder="Ürt2026 SKT2028&#10;Her satır ayrı bir etiket olur; tek satır varsa tüm etiketlere aynı metin basılır.">Ürt2026 SKT2028</textarea>
+            <small>Uzun içerikler etiketin içinde satırlara bölünür. Birden fazla satır girerseniz metinler dikey sırayla etiketlere yerleştirilir.</small>
+          </label>
+          <div class="label-pair">
+            <label class="label-field" for="labelQuantity">Basılacak etiket
+              <input id="labelQuantity" type="number" min="1" max="10000" step="1" value="18" required>
+            </label>
+            <label class="label-field" for="labelGap">Etiket aralığı (mm)
+              <input id="labelGap" type="number" min="0" max="20" step="0.5" value="2" required>
+            </label>
+          </div>
+          <p class="label-help">Sayfa A4 dikeydir; 5 mm yazıcı kenar boşluğu kullanılır. Sayfaya sığan adet etiket ölçüsü ve aralığına göre hesaplanır.</p>
+          <p id="capacitySummary" class="label-summary" aria-live="polite"></p>
+          <div class="label-actions">
+            <button type="submit">Yazdır</button>
+            <button type="button" class="secondary" id="resetLabel">Varsayılana dön</button>
+          </div>
+        </form>
+        <p id="labelStatus" role="status" aria-live="polite">Oturum kontrol ediliyor…</p>
+      </section>
+      <section class="label-card" aria-labelledby="previewTitle">
+        <div class="label-preview-head">
+          <h2 id="previewTitle">A4 önizleme</h2>
+          <span id="pageCapacity"></span>
+        </div>
+        <div class="page-viewport"><div id="previewSheet" class="sheet" aria-label="Etiket baskı önizlemesi"></div></div><div id="printSheets" class="print-sheets" aria-hidden="true"></div>
+      </section>
+    </div>
+  </main>
+  <script>
+    (async function(){
+      const status=document.getElementById('labelStatus');
+      try{
+        await window.waitConfig();
+        const db=window.supabase.createClient('https://jarsxtpqzqzhlshpmgot.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphcnN4dHBxenF6aGxzaHBtZ290Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyODExMTcsImV4cCI6MjA3Nzg1NzExN30.98oYONSkb8XSDrfGW2FxhFmt2BLB5ZRo3Ho50GhZYgE');
+        await window.requireSession(db);
+        status.textContent='';
+      }catch(error){status.textContent=error.message||'Oturum doğrulanamadı.';return;}
+      const width=document.getElementById('labelWidth'),height=document.getElementById('labelHeight');
+      const gap=document.getElementById('labelGap'),quantity=document.getElementById('labelQuantity');
+      const text=document.getElementById('labelText'),sheet=document.getElementById('previewSheet');
+      const capacitySummary=document.getElementById('capacitySummary'),pageCapacity=document.getElementById('pageCapacity');
+      const PAGE_W=200,PAGE_H=287;
+      function positive(input,fallback){const n=Number(input.value);return Number.isFinite(n)&&n>0?n:fallback;}
+      function contentLines(){return text.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);}
+      function makeCell(target,i,values,w,h){
+        const cell=document.createElement('div');cell.className='label-item';
+        const value=values.length?values[i%values.length]:'Önizleme metni';
+        cell.textContent=value;
+        const base=Math.max(7,Math.min(16,Math.sqrt(w*h)*0.55));
+        const estimatedLines=Math.max(1,Math.ceil(value.length/Math.max(1,Math.floor(w*0.45))));
+        const fit=Math.max(6,Math.min(base,(h*2.1)/estimatedLines));
+        cell.style.fontSize=fit+'px';cell.title=value;target.appendChild(cell);
+      }
+      function makePage(cols,w,h,g,startIndex,items,values){
+        const page=document.createElement('div');page.className='sheet';
+        page.style.gridTemplateColumns='repeat('+cols+','+w+'mm)';
+        page.style.gridAutoRows=h+'mm';page.style.columnGap=g+'mm';page.style.rowGap=g+'mm';
+        for(let j=0;j<items;j++)makeCell(page,startIndex+j,values,w,h);
+        return page;
+      }
+      function draw(){
+        const w=positive(width,60),h=positive(height,40),g=Math.max(0,Number(gap.value)||0);
+        const cols=Math.max(0,Math.floor((PAGE_W+g)/(w+g)));
+        const rows=Math.max(0,Math.floor((PAGE_H+g)/(h+g)));
+        const capacity=cols*rows;
+        const count=Math.min(10000,Math.max(1,Math.floor(positive(quantity,1))));
+        const values=contentLines(),printSheets=document.getElementById('printSheets');
+        capacitySummary.textContent=capacity
+          ? 'Bir A4 sayfasına '+capacity+' etiket sığar ('+cols+' sütun × '+rows+' sıra). '+Math.ceil(count/capacity)+' sayfa gerekir.'
+          : 'Bu ölçüler A4 yazdırma alanına sığmıyor. Ölçüyü küçültün.';
+        pageCapacity.textContent=capacity+' adet / sayfa';
+        sheet.replaceChildren();printSheets.replaceChildren();
+        if(!capacity)return;
+        const previewCount=Math.min(capacity,count,300);
+        sheet.style.gridTemplateColumns='repeat('+cols+','+w+'mm)';
+        sheet.style.gridAutoRows=h+'mm';sheet.style.columnGap=g+'mm';sheet.style.rowGap=g+'mm';
+        for(let i=0;i<previewCount;i++)makeCell(sheet,i,values,w,h);
+        for(let start=0;start<count;start+=capacity){
+          printSheets.appendChild(makePage(cols,w,h,g,start,Math.min(capacity,count-start),values));
+        }
+      }
+      document.getElementById('labelForm').addEventListener('input',draw);
+      document.getElementById('labelForm').addEventListener('submit',event=>{
+        event.preventDefault();
+        if(!contentLines().length){status.textContent='Yazdırmak için etiket metni girin.';text.focus();return;}
+        status.textContent='Yazdırma penceresi açılıyor…';
+        window.print();
+        setTimeout(()=>{status.textContent='Yazdırma tamamlandıysa etiketleri yazıcıdan alabilirsiniz.';},500);
+      });
+      document.getElementById('resetLabel').addEventListener('click',()=>{
+        width.value='60';height.value='40';gap.value='2';quantity.value='18';text.value='Ürt2026 SKT2028';draw();
+      });
+      window.addEventListener('beforeprint',draw);
+      draw();
+    })();
+  </script>
+</body>
+</html>
